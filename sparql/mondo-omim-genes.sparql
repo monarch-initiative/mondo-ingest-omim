@@ -4,6 +4,7 @@ prefix MONDO: <http://purl.obolibrary.org/obo/MONDO_>
 prefix RO: <http://purl.obolibrary.org/obo/RO_>
 prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 prefix oio: <http://www.geneontology.org/formats/oboInOwl#>
+prefix mondons: <http://purl.obolibrary.org/obo/mondo#>
 prefix def: <http://purl.obolibrary.org/obo/IAO_0000115>
 prefix owl: <http://www.w3.org/2002/07/owl#>
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
@@ -19,6 +20,18 @@ WHERE
         owl:someValuesFrom ?omim_gene
   ] .
   ?omim_gene skos:exactMatch ?hgnc_id .
+
+  # data/protected-disease-gene.tsv pairs a gene with the Mondo class it belongs to. Where either
+  # side of such a pair is curated for this entry, only the curated pairings survive. Without this,
+  # an entry covering several Mondo classes (e.g. 'included terms' that Mondo splits into
+  # gene-specific subtypes) gives every one of them every gene of the entry.
+  FILTER NOT EXISTS {
+    { ?mondo_id mondons:protected_gene [] }
+    UNION
+    { ?omim_disease skos:exactMatch/mondons:protected_gene ?omim_gene }
+    FILTER NOT EXISTS { ?mondo_id mondons:protected_gene ?omim_gene }
+  }
+
   FILTER(STRSTARTS(STR(?hgnc_id), "http://identifiers.org/hgnc/"))
   FILTER(STRSTARTS(STR(?mondo_id), "http://purl.obolibrary.org/obo/MONDO_"))
   BIND(REPLACE(STR(?omim_disease), "https://omim.org/entry/", "OMIM:") AS ?omim_disease_xref)
