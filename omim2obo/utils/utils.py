@@ -45,26 +45,25 @@ def get_d2g_protected(
     }
 
 
-def get_protected_mondo_mappings(
-    path=DISEASE_GENE_PROTECTED_PATH
-) -> Dict[str, set]:
-    """Get MONDO mappings from protected file.
+def get_d2g_protected_rows(path=DISEASE_GENE_PROTECTED_PATH) -> List[Dict[str, str]]:
+    """Get manually curated disease-gene protections, one dict per row.
 
-    :return: Dictionary with phenotype MIM as keys and set of MONDO IDs (as CURIEs) as values.
+    Unlike get_d2g_protected(), this keeps each row intact. A row's `mondo_id` says which Mondo class
+    the protected association belongs to, and that pairing has to survive: one OMIM phenotype entry
+    can cover several Mondo classes (e.g. OMIM 'included terms' that Mondo splits into gene-specific
+    subtypes), and then each gene belongs to one of them rather than to all of them.
+
+    Rows missing any of the fields needed to place the association are skipped.
+
+    :return: List of dicts with bare 'phenotype_mim', 'gene_mim' and 'mondo_id' ids.
     """
     df = pd.read_csv(path, sep='\t').fillna('')
-    df['phenotype_mim'] = df['phenotype_mim'].apply(lambda x: x.split(':')[1] if ':' in str(x) else x)
-    
-    mondo_mappings = {}
-    for _, row in df.iterrows():
-        p_mim = row['phenotype_mim']
-        mondo_id = row['mondo_id']
-        if p_mim and mondo_id:
-            if p_mim not in mondo_mappings:
-                mondo_mappings[p_mim] = set()
-            mondo_mappings[p_mim].add(mondo_id)
-    
-    return mondo_mappings
+    cols = ['phenotype_mim', 'gene_mim', 'mondo_id']
+    rows = [{col: str(x[col]).strip() for col in cols} for x in df.to_dict(orient='records')]
+    return [
+        {col: val.split(':')[1] for col, val in row.items()}
+        for row in rows if all(row.values())
+    ]
 
 
 def get_d2g_exclusions_by_curator(path=DISEASE_GENE_EXCLUSIONS_PATH) -> Dict[str, Optional[URIRef]]:

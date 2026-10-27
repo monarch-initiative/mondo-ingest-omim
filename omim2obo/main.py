@@ -72,7 +72,7 @@ from omim2obo.namespaces import *
 from omim2obo.parsers.omim_entry_parser import REVIEW_CASES, cleanup_title, get_alt_and_included_titles_and_symbols, \
     get_pubs, get_mapped_ids, log_review_cases, recapitalize_acronyms_in_titles
 from omim2obo.parsers.omim_txt_parser import *  # todo: change to specific imports
-from omim2obo.utils.utils import get_d2g_exclusions_by_curator, get_d2g_protected, get_protected_mondo_mappings
+from omim2obo.utils.utils import get_d2g_exclusions_by_curator, get_d2g_protected, get_d2g_protected_rows
 
 # Vars
 OUTPATH = os.path.join(ROOT_DIR / 'omim.ttl')
@@ -262,6 +262,7 @@ def omim2obo(use_cache: bool = False):
     graph.add((URIRef(oboInOwl.hasSynonymType), RDF.type, OWL.AnnotationProperty))
     graph.add((URIRef(oboInOwl.source), RDF.type, OWL.AnnotationProperty))
     graph.add((URIRef(MONDONS.omim_included), RDF.type, OWL.AnnotationProperty))
+    graph.add((URIRef(MONDONS.protected_gene), RDF.type, OWL.AnnotationProperty))
     graph.add((URIRef(OMO['0003000']), RDF.type, OWL.AnnotationProperty))
     graph.add((BIOLINK['has_evidence'], RDF.type, OWL.AnnotationProperty))
     graph.add((TAX_URI, RDF.type, OWL.Class))
@@ -439,16 +440,16 @@ def omim2obo(use_cache: bool = False):
 
             evidence = f'Evidence: ({p_map_key}) {p_map_lab}'
             p_mim_excluded = p_mim in exclusions_p_mim_orcid_map
-            protected_digenic_key = (p_mim, gene_mim)
+            protected_key = (p_mim, gene_mim)
 
-            protected_digenic_assoc: bool = protected_digenic_key in protected_gene_pheno__hgnc_orcid_map
-            if protected_digenic_assoc:
+            protected_assoc: bool = protected_key in protected_gene_pheno__hgnc_orcid_map
+            if protected_assoc:
                 hgnc_id_protected: str
                 orcid_protected: Optional[URIRef]
-                hgnc_id_protected, orcid_protected = protected_gene_pheno__hgnc_orcid_map[protected_digenic_key]
+                hgnc_id_protected, orcid_protected = protected_gene_pheno__hgnc_orcid_map[protected_key]
                 add_gene_disease_associations(graph, gene_mim, p_mim, evidence, orcid_protected)
                 graph.add((OMIM[gene_mim], SKOS.exactMatch, HGNC[hgnc_id_protected]))
-                processed_protected_assocs.add(protected_digenic_key)
+                processed_protected_assocs.add(protected_key)
                 continue
 
             # Skip: No phenotype or unknown defect
@@ -486,15 +487,15 @@ def omim2obo(use_cache: bool = False):
             evidence = 'Evidence: (3) disease-defining (protected association)'
             add_gene_disease_associations(graph, gene_mim, p_mim, evidence, orcid_protected)
             graph.add((OMIM[gene_mim], SKOS.exactMatch, HGNC[hgnc_id_protected]))
-    
-    # Add MONDO mappings from protected file
-    # This ensures all MONDO IDs listed in protected associations are available for SPARQL queries
-    protected_mondo_mappings = get_protected_mondo_mappings()
-    for p_mim, mondo_ids in protected_mondo_mappings.items():
-        for mondo_curie in mondo_ids:
-            # Extract MONDO ID from CURIE (e.g., "MONDO:0100537" -> "0100537")
-            mondo_id = mondo_curie.split(':')[1] if ':' in mondo_curie else mondo_curie
-            graph.add((OMIM[p_mim], SKOS.exactMatch, MONDO[mondo_id]))
+
+    # Scope protected associations to the Mondo class each was curated against. The mapping makes
+    # that class visible to the Mondo projection; `protected_gene` records which of the entry's genes
+    # is its own, so sibling classes (e.g. the gene-specific subtypes Mondo splits an entry's
+    # 'included terms' into) do not each inherit all of them. See sparql/mondo-omim-genes.sparql.
+    for row in get_d2g_protected_rows():
+        mondo_uri = MONDO[row['mondo_id']]
+        graph.add((OMIM[row['phenotype_mim']], SKOS.exactMatch, mondo_uri))
+        graph.add((mondo_uri, URIRef(MONDONS.protected_gene), OMIM[row['gene_mim']]))
 
     # PubMed refs, UMLS mappings, Orphanet mappings
     pubmed_links_df, mappings_df = get_pubmed_refs_and_mappings()
