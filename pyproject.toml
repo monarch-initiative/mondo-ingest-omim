@@ -1,0 +1,18 @@
+[project]
+name = "omim2obo"
+version = "0.1.0"
+description = "Transforms OMIM's downloads into OWL and TSV artefacts for the Mondo Disease Ontology"
+readme = "README.md"
+# The release build runs inside obolibrary/odkfull, which ships Python 3.12.
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

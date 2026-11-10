@@ -47,3 +47,6 @@ morbidmap-protected-added-with-header.tsv
 /golden/inputs/
 /golden/out/
 /golden/work/
+
+# Python
+.venv/
