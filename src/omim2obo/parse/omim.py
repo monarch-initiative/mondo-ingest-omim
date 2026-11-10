@@ -76,3 +76,130 @@ def parse_morbidmap(lines: Iterable[str]) -> list[MorbidmapRow]:
             cyto_location=cyto_location,
         ))
     return rows
+
+
+class EntryPrefix(Enum):
+    """The symbol before a MIM number, saying what kind of thing the entry describes.
+
+    Values are how mimTitles.txt spells them; descriptions are OMIM's own, from its footer.
+    """
+    GENE = 'Asterisk'
+    """Gene"""
+    GENE_AND_PHENOTYPE = 'Plus'
+    """Gene and phenotype, combined"""
+    PHENOTYPE = 'Number Sign'
+    """Phenotype, molecular basis known"""
+    PHENOTYPE_OR_LOCUS = 'Percent'
+    """Phenotype or locus, molecular basis unknown"""
+    OTHER = 'NULL'
+    """Other, mainly phenotypes with suspected mendelian basis"""
+
+
+@dataclass(frozen=True, slots=True)
+class TitleRow:
+    """One line of mimTitles.txt, for an entry that exists.
+
+    Each of the three fields holds `;;`-separated titles, each optionally followed by `; SYMBOL`s.
+    They are kept as OMIM writes them.
+    """
+    prefix: EntryPrefix
+    mim: str
+    preferred: str
+    alternative: str
+    included: str
+    """Titles of other phenotypes described within this entry: 'Other entities represented in this
+    entry' on omim.org."""
+
+
+@dataclass(frozen=True, slots=True)
+class RemovedRow:
+    """One line of mimTitles.txt, for an entry that no longer exists: prefix `Caret`."""
+    mim: str
+    moved_to: tuple[str, ...]
+    """The entries that replaced it. Empty if it was removed from the database outright."""
+
+
+def parse_mim_titles(lines: Iterable[str]) -> list[TitleRow | RemovedRow]:
+    rows = []
+    for line in data_lines(lines):
+        prefix, mim, preferred, alternative, included = line.split('\t')
+        if prefix == 'Caret':
+            # MOVED TO 900001 | MOVED TO 900001 AND 900002 | REMOVED FROM DATABASE
+            if not preferred.startswith(('MOVED TO ', 'REMOVED FROM DATABASE')):
+                raise ValueError(f'mimTitles.txt: cannot read what became of removed entry in {line!r}')
+            rows.append(RemovedRow(mim, tuple(re.findall(r'\d{6}', preferred))))
+        else:
+            rows.append(TitleRow(EntryPrefix(prefix), mim, preferred, alternative, included))
+    return rows
+
+
+class Mim2GeneEntryType(Enum):
+    GENE = 'gene'
+    GENE_PHENOTYPE = 'gene/phenotype'
+    PHENOTYPE = 'phenotype'
+    PREDOMINANTLY_PHENOTYPES = 'predominantly phenotypes'
+    MOVED_REMOVED = 'moved/removed'
+
+
+@dataclass(frozen=True, slots=True)
+class Mim2GeneRow:
+    """One line of mim2gene.txt: an entry's identifiers in other gene databases."""
+    mim: str
+    entry_type: Mim2GeneEntryType
+    entrez_id: str | None
+    hgnc_symbol: str | None
+    ensembl_id: str | None
+
+
+def parse_mim2gene(lines: Iterable[str]) -> list[Mim2GeneRow]:
+    rows = []
+    for line in data_lines(lines):
+        mim, entry_type, entrez_id, hgnc_symbol, ensembl_id = line.split('\t')
+        rows.append(Mim2GeneRow(
+            mim, Mim2GeneEntryType(entry_type), entrez_id or None, hgnc_symbol or None, ensembl_id or None))
+    return rows
+
+
+@dataclass(frozen=True, slots=True)
+class Genemap2Row:
+    """One line of genemap2.txt, reduced to the two of its fourteen columns that the pipeline reads."""
+    mim: str
+    approved_symbol: str | None
+
+
+def parse_genemap2(lines: Iterable[str]) -> list[Genemap2Row]:
+    rows = []
+    for line in data_lines(lines):
+        fields = line.split('\t')
+        rows.append(Genemap2Row(mim=fields[5], approved_symbol=fields[8] or None))
+    return rows
+
+
+@dataclass(frozen=True, slots=True)
+class PhenotypicSeries:
+    """A group of entries for clinically similar phenotypes, from phenotypicSeries.txt."""
+    number: str
+    """With its prefix, e.g. `PS900001`."""
+    title: str
+    members: tuple[str, ...]
+
+
+def parse_phenotypic_series(lines: Iterable[str]) -> list[PhenotypicSeries]:
+    """A series is spread over several lines: one giving its title, then one for each member.
+
+        PS900001    Wobbly knee syndrome
+        PS900001    900001    Wobbly knee syndrome 1
+        PS900001    900002    Wobbly knee syndrome 2
+    """
+    titles: dict[str, str] = {}
+    members: dict[str, list[str]] = {}
+    for line in data_lines(lines):
+        match line.split('\t'):
+            case [number, title]:
+                titles[number] = title
+                members[number] = []
+            case [number, mim, _phenotype]:
+                members[number].append(mim)
+            case _:
+                raise ValueError(f'phenotypicSeries.txt: expected two or three fields in {line!r}')
+    return [PhenotypicSeries(number, title, tuple(members[number])) for number, title in titles.items()]
