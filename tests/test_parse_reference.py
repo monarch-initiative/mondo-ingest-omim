@@ -5,7 +5,8 @@ import pytest
 from sssom_schema import Mapping
 
 from omim2obo.parse.reference import (
-    HgncGene, PubmedReference, parse_entry_mappings, parse_hgnc, parse_pubmed_refs, parse_sssom)
+    HgncGene, PubmedReference, parse_entry_mappings, parse_hgnc, parse_known_capitalizations, parse_pubmed_refs,
+    parse_sssom)
 
 
 def mapping(subject_id, object_id, justification, **labels) -> Mapping:
@@ -67,3 +68,18 @@ def test_hgnc_keeps_id_and_symbol():
 def test_hgnc_gene_without_a_symbol_is_an_error():
     with pytest.raises(ValueError, match='line 2: missing hgnc_id or symbol'):
         parse_hgnc([HGNC_HEADER, 'HGNC:99901\t\tfake gene 1\tprotein-coding gene\n'])
+
+
+def test_known_capitalizations():
+    assert parse_known_capitalizations([
+        'lower_name\tcap_name\tpattern\n',
+        'wobbleton\tWobbleton\t%[ ]wobbleton[ ]%\n',
+    ]) == {'wobbleton': 'Wobbleton'}
+
+
+def test_known_capitalizations_QUIRK_stray_tab_shifts_the_columns():
+    """Modelled on the `de lange` row, which is why OMIM:122470 is "cornelia lange lange syndrome"."""
+    assert parse_known_capitalizations([
+        'lower_name\tcap_name\tpattern\n',
+        'von\twobbleton\tvon Wobbleton %[ ]von wobbleton[ ]%\n',
+    ]) == {'von': 'wobbleton'}

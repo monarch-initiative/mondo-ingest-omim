@@ -4,8 +4,9 @@ QUIRK marks behaviour that is probably unintended.
 """
 import pytest
 
+from omim2obo.parse.omim import EntryPrefix, TitleRow
 from omim2obo.titles import (
-    cleanup_title, detect_abbreviations, get_alt_and_included_titles_and_symbols, parse_title_symbol_pairs,
+    EntryTitles, TitleGroup, cleanup_title, entry_titles, detect_abbreviations, get_alt_and_included_titles_and_symbols, parse_title_symbol_pairs,
     recapitalize_acronyms_in_title, recapitalize_acronyms_in_titles, remove_included_and_formerly_suffixes,
     separate_former_titles_and_symbols)
 
@@ -192,3 +193,35 @@ def test_empty_field_has_no_titles():
 def test_field_QUIRK_mixed_case_formerly_is_filed_as_former_but_keeps_its_suffix():
     assert get_alt_and_included_titles_and_symbols('Wobbly knee, formerly; wk, formerly', EPONYMS) == (
         [], [], ['wobbly knee, formerly'], ['wk, formerly'])
+
+
+def test_entry_titles():
+    """Modelled on OMIM:231200 (Bernard-Soulier): included titles naming gene-specific subtypes."""
+    row = TitleRow(
+        prefix=EntryPrefix.PHENOTYPE,
+        mim='900001',
+        preferred='WOBBLY KNEE SYNDROME; WKS',
+        alternative='KNEE WOBBLE OF BEHCET;; GENU INSTABILE, FORMERLY; GI, FORMERLY',
+        included='WOBBLY KNEE SYNDROME, TYPE A1, INCLUDED; WKSA1, INCLUDED;; WOBBLY KNEE SYNDROME, TYPE II, INCLUDED')
+    assert entry_titles(row, EPONYMS) == EntryTitles(
+        mim='900001',
+        prefix=EntryPrefix.PHENOTYPE,
+        preferred_title='wobbly knee syndrome',
+        preferred_symbols=('WKS',),
+        alternative=TitleGroup(('knee wobble of Behcet',), (), ('genu instabile',), ('GI',)),
+        included=TitleGroup(
+            ('wobbly knee syndrome, type a1', 'wobbly knee syndrome, type 2'), ('WKSA1',), (), ()),
+    )
+
+
+def test_entry_titles_symbol_from_one_field_recapitalizes_titles_in_another():
+    row = TitleRow(EntryPrefix.PHENOTYPE, '900001', 'WKS DEFICIENCY', 'KNEE WOBBLE; WKS', 'WKS DEFECT, INCLUDED')
+    titles = entry_titles(row, {})
+    assert titles.preferred_title == 'WKS deficiency'
+    assert titles.included.titles == ('WKS defect',)
+
+
+def test_entry_titles_without_alternative_or_included():
+    row = TitleRow(EntryPrefix.GENE, '900100', 'FAKE GENE 1; FAKE1', '', '')
+    empty = TitleGroup((), (), (), ())
+    assert entry_titles(row, {}) == EntryTitles('900100', EntryPrefix.GENE, 'fake gene 1', ('FAKE1',), empty, empty)

@@ -1,8 +1,52 @@
 """Turning OMIM's ALL CAPS title fields into readable titles and symbols."""
 import re
+from dataclasses import dataclass
 from typing import List, Dict, Set, Tuple, Union
 
+from omim2obo.parse.omim import EntryPrefix, TitleRow
 from omim2obo.romanplus import fromRoman, romanNumeralPattern, toRoman
+
+
+@dataclass(frozen=True, slots=True)
+class TitleGroup:
+    """One of an entry's title fields, split and cleaned."""
+    titles: tuple[str, ...]
+    symbols: tuple[str, ...]
+    former_titles: tuple[str, ...]
+    former_symbols: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class EntryTitles:
+    mim: str
+    prefix: EntryPrefix
+    preferred_title: str
+    preferred_symbols: tuple[str, ...]
+    alternative: TitleGroup
+    included: TitleGroup
+
+
+def entry_titles(row: TitleRow, capitalizations: dict[str, str]) -> EntryTitles:
+    preferred_title, *preferred_symbols = [x.strip() for x in row.preferred.split(';')]
+    alternative = get_alt_and_included_titles_and_symbols(row.alternative, capitalizations)
+    included = get_alt_and_included_titles_and_symbols(row.included, capitalizations)
+    # A symbol from any field restores its capitals in every title of the entry.
+    symbols = {*preferred_symbols, *alternative[1], *alternative[3], *included[1], *included[3]}
+
+    def group(titles, symbols_, former_titles, former_symbols) -> TitleGroup:
+        return TitleGroup(
+            tuple(recapitalize_acronyms_in_titles(titles, symbols)), tuple(symbols_),
+            tuple(recapitalize_acronyms_in_titles(former_titles, symbols)), tuple(former_symbols))
+
+    return EntryTitles(
+        mim=row.mim,
+        prefix=row.prefix,
+        preferred_title=recapitalize_acronyms_in_title(
+            cleanup_title(preferred_title, word_replacements=capitalizations), symbols),
+        preferred_symbols=tuple(preferred_symbols),
+        alternative=group(*alternative),
+        included=group(*included),
+    )
 
 
 def detect_abbreviations(label: str, capitalization_threshold=0.75) -> List[str]:

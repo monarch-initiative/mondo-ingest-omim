@@ -71,5 +71,14 @@ def parse_hgnc(lines: Iterable[str]) -> list[HgncGene]:
     return genes
 
 
+def parse_known_capitalizations(lines: Iterable[str]) -> dict[str, str]:
+    """data/known_capitalizations.tsv: words whose capitals survive a title being lowercased.
+
+    Only the first two columns are read, the lowercase word and its replacement.
+    """
+    _header, *rows = csv.reader(lines, delimiter='\t')
+    return {row[0]: row[1] for row in rows}
+
+
 def _pipe_separated(field: str) -> list[str]:
     return field.split('|') if field else []
