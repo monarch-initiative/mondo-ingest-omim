@@ -4,7 +4,7 @@ QUIRK marks behaviour that is probably unintended.
 """
 import pytest
 
-from omim2obo.parsers.omim_entry_parser import (
+from omim2obo.titles import (
     cleanup_title, detect_abbreviations, get_alt_and_included_titles_and_symbols, parse_title_symbol_pairs,
     recapitalize_acronyms_in_title, recapitalize_acronyms_in_titles, remove_included_and_formerly_suffixes,
     separate_former_titles_and_symbols)
@@ -181,14 +181,14 @@ def test_field_is_split_sorted_and_cleaned():
     field = ('WOBBLY KNEE SYNDROME, TYPE II, INCLUDED; WKS2, INCLUDED'
              ';; OLD WOBBLE, FORMERLY; OW, FORMERLY'
              ';; KNEE WOBBLE')
-    assert get_alt_and_included_titles_and_symbols(field) == (
+    assert get_alt_and_included_titles_and_symbols(field, EPONYMS) == (
         ['wobbly knee syndrome, type 2', 'knee wobble'], ['WKS2'], ['old wobble'], ['OW'])
 
 
 def test_empty_field_has_no_titles():
-    assert get_alt_and_included_titles_and_symbols('') == ([], [], [], [])
+    assert get_alt_and_included_titles_and_symbols('', EPONYMS) == ([], [], [], [])
 
 
 def test_field_QUIRK_mixed_case_formerly_is_filed_as_former_but_keeps_its_suffix():
-    assert get_alt_and_included_titles_and_symbols('Wobbly knee, formerly; wk, formerly') == (
+    assert get_alt_and_included_titles_and_symbols('Wobbly knee, formerly; wk, formerly', EPONYMS) == (
         [], [], ['wobbly knee, formerly'], ['wk, formerly'])

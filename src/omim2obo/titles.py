@@ -1,163 +1,8 @@
-"""OMIM Entry parsers"""
-import csv
-import logging
-from collections import defaultdict
+"""Turning OMIM's ALL CAPS title fields into readable titles and symbols."""
+import re
 from typing import List, Dict, Set, Tuple, Union
 
-import pandas as pd
-from rdflib import Graph, RDF, RDFS, DC, Literal, OWL, SKOS, URIRef
-
-from omim2obo.config import DATA_DIR, ReviewCase
-from omim2obo.omim_type import OmimType, get_omim_type
-from omim2obo.namespaces import *
-from omim2obo.utils.romanplus import *
-
-
-LOG = logging.getLogger('omim2obo.parsers.api_entry_parser')
-REVIEW_SELF_REF_CASE_I = 0
-REVIEW_CASES: List[ReviewCase] = []
-REVIEW_CASE_NAME_MAP: Dict[int, str] = {
-    1: "D2G: digenic",
-    2: "D2G: self-referential",
-    3: "D2G: somatic",
-    4: "D2G: Phenotype is gene",
-    5: "D2G: Phenotype type error",
-}
-
-def get_known_capitalizations() -> Dict[str, str]:
-    """Get list of known capitalizations for proper names, acronyms, and the like.
-    todo: Contains space-delimited words, e.g. "vitamin d". The way that
-     cleanup_label is currently implemented, each word in the label gets
-     replaced; i.e. it would try to replace "vitamin" and "d" separately. Hence,
-     this would fail.
-     Therefore, we should probably do this in 2 different operations: (1) use
-     the current 'word replacement' logic, but also, (2), at the end, do a
-     generic string replacement (e.g. my_str.replace(a, b). When implementing
-     (2), we should also split this dictionary into two separate dictionaries,
-     each for 1 of these 2 different purposes.
-
-    todo: known_capitalizations.tsv can be refactored possibly. It really only needs 1 column, the case to replaace. The
-     pattern column is not used, and the first column (lowercase) can be computed by using .lower() on the case to
-     replace. We could also leave as-is since this file is shared elsewhere in the project infrastructure, though I do
-     not know its source-of-truth location.
-    """
-    path = DATA_DIR / 'known_capitalizations.tsv'
-    with open(path, "r") as file:
-        data_io = csv.reader(file, delimiter="\t")
-        data: List[List[str]] = [x for x in data_io]
-    df = pd.DataFrame(data[1:], columns=data[0])
-    d = {}
-    for index, row in df.iterrows():
-        d[row['lower_name']] = row['cap_name']
-    return d
-
-
-CAPITALIZATION_REPLACEMENTS: Dict[str, str] = get_known_capitalizations()
-
-
-# todo: This isn't used in the ingest to create omim.ttl. Did this have some other use case?
-#  - If working on this again, remove these noinspect warning suppressions and address them
-# noinspection PyUnusedLocal,PyUnboundLocalVariable,PyTypeChecker
-def transform_entry(entry) -> Graph:
-    """
-    Transforms an OMIM API entry to a graph.
-    This function is obsolete and incomplete. It should only be used to verify the API entry and some functions
-
-    :param entry:
-    :return:
-    """
-    omim_type = get_omim_type(entry.get('prefix', None))
-    omim_num = str(entry['mimNumber'])
-    titles = entry['titles']
-    label = titles['preferredTitle']
-
-    graph = Graph()
-
-    omim_uri = URIRef(OMIM[omim_num])
-    other_labels = []
-    if 'alternativeTitles' in titles:
-        cleaned, label_endswith_included = parse_title_symbol_pairs(titles['alternativeTitles'])
-        other_labels += cleaned
-    if 'includedTitles' in titles:
-        cleaned, label_endswith_included = parse_title_symbol_pairs(titles['includedTitles'])
-        other_labels += cleaned
-
-    graph.add((omim_uri, RDF.type, OWL.Class))
-
-    abbrev = label.split(';')[1].strip() if ';' in label else None
-
-    if omim_type == OmimType.HERITABLE_PHENOTYPIC_MARKER.value:  # %
-        graph.add((omim_uri, RDFS.label, Literal(cleanup_title(label))))
-        graph.add((omim_uri, BIOLINK['category'], BIOLINK['Disease']))
-    elif omim_type == OmimType.GENE.value or omim_type == OmimType.HAS_AFFECTED_FEATURE.value:  # * or +
-        omim_type = OmimType.GENE.value
-        graph.add((omim_uri, RDFS.label, Literal(abbrev)))
-        graph.add((omim_uri, RDFS.subClassOf, SO['0000704']))
-        graph.add((omim_uri, BIOLINK['category'], BIOLINK['Gene']))
-    elif omim_type == OmimType.PHENOTYPE.value:  # #
-        graph.add((omim_uri, RDFS.label, Literal(cleanup_title(label))))
-        graph.add((omim_uri, BIOLINK['category'], BIOLINK['Disease']))
-    else:  # ^ or NULL (no prefix character)
-        graph.add((omim_uri, RDFS.label, Literal(cleanup_title(label))))
-
-    graph.add((omim_uri, oboInOwl.hasExactSynonym, Literal(label)))
-    for label in other_labels:
-        graph.add((omim_uri, oboInOwl.hasRelatedSynonym, Literal(label)))
-
-    if 'geneMapExists' in entry and entry['geneMapExists']:
-        genemap = entry['geneMap']
-        is_gene = False
-        if omim_type == OmimType.HERITABLE_PHENOTYPIC_MARKER.value:  # %
-            ncbi_ids = get_mapped_gene_ids(entry)
-            if len(ncbi_ids) > 0:
-                feature_uri = NCBIGENE[ncbi_ids[0]]
-            for ncbi_id in ncbi_ids:
-                # todo: This might be better as bnodes
-                # MONARCH:b10cbd376598f2d328ff a OBAN:association ;
-                #     OBAN:association_has_object OMIM:100070 ;
-                #     OBAN:association_has_predicate RO:0002200 ;
-                #     OBAN:association_has_subject NCBIGene:100329167 .
-                graph.add((NCBIGENE[ncbi_id.strip()], RO['0002200'], omim_uri))
-        elif omim_type == OmimType.GENE.value or omim_type == OmimType.HAS_AFFECTED_FEATURE.value:  # * or +
-            feature_uri = omim_uri
-            is_gene = True
-
-        if feature_uri is not None:
-            if 'comments' in genemap:
-                comments = genemap['comments']
-                if comments.strip():
-                    graph.add((feature_uri, DC.description, Literal(comments)))
-            if 'cytoLocation' in genemap:
-                cytoloc = genemap['cytoLocation']
-                tax_id = '9606'
-                chr_id = tax_id + 'chr' + cytoloc
-                graph.add((feature_uri, RO['0002525'], CHR[chr_id]))
-
-    # Pubmed Citations
-    for pmid in get_pubs(entry):
-        graph.add((omim_uri, IAO['0000142'], PMID[pmid]))
-
-    # Mapped IDs
-    for namespace, mapped_ids in get_mapped_ids(entry).items():
-        for mapped_id in mapped_ids:
-            graph.add((omim_uri, SKOS.exactMatch, namespace[mapped_id]))
-
-    # Phenotypic series
-    for phenotypic_serie in get_phenotypic_series(entry):
-        if omim_type == OmimType.HERITABLE_PHENOTYPIC_MARKER.value or omim_type == OmimType.PHENOTYPE.value:
-            graph.add((omim_uri, RDFS.subClassOf, OMIMPS[phenotypic_serie]))
-        elif omim_type == OmimType.GENE.value or omim_type == OmimType.HAS_AFFECTED_FEATURE.value:
-            graph.add((omim_uri, RO['0003304'], OMIMPS[phenotypic_serie]))
-
-    # NCBI ENTREZ Gene IDs
-    if omim_type == OmimType.GENE.value or omim_type == OmimType.HAS_AFFECTED_FEATURE.value:
-        for gene_id in get_mapped_gene_ids(entry):
-            graph.add((omim_uri, OWL.equivalentClass, NCBIGENE[gene_id]))
-
-    # Allelic Variants
-    for allelic_variant in get_process_allelic_variants(entry):
-        ...
-    return graph
+from omim2obo.romanplus import fromRoman, romanNumeralPattern, toRoman
 
 
 def detect_abbreviations(label: str, capitalization_threshold=0.75) -> List[str]:
@@ -166,8 +11,8 @@ def detect_abbreviations(label: str, capitalization_threshold=0.75) -> List[str]
     # todo: handle several warnings: {1} redundant, {1,} simplified to +
     acronyms_without_periods_compiler = re.compile('[A-Z]{1}[A-Z0-9]{1,}')
     # todo: PyCharm flagged next 2 lines as invalid escape sequence, but this code seems to work? Should double check
-    acronyms_with_periods_compiler = re.compile('[A-Z]{1}\.([A-Z0-9]\.){1,}')
-    title_cased_abbrev_compiler = re.compile('[A-Z]{1}[a-zA-Z]{1,}\.')
+    acronyms_with_periods_compiler = re.compile(r'[A-Z]{1}\.([A-Z0-9]\.){1,}')
+    title_cased_abbrev_compiler = re.compile(r'[A-Z]{1}[a-zA-Z]{1,}\.')
 
     # Special threshold-based logic, because incoming data has highly inconsistent capitalization
     # is_largely_uppercase = synonym.upper() == synonym  # too many false positives
@@ -197,7 +42,7 @@ def cleanup_title(
     conjunctions: List[str] = ['and', 'but', 'yet', 'for', 'nor', 'so'],
     little_preps: List[str] = ['at', 'by', 'in', 'of', 'on', 'to', 'up', 'as', 'it', 'or'],
     articles: List[str] = ['a', 'an', 'the'],
-    word_replacements: Dict[str, str] = CAPITALIZATION_REPLACEMENTS,
+    word_replacements: Dict[str, str] = None,
 ) -> str:
     """Reformat the ALL CAPS OMIM labels to something more pleasant to read.
 
@@ -331,13 +176,15 @@ def separate_former_titles_and_symbols(
     return current_titles, current_symbols, former_titles, former_symbols
 
 
-def clean_alt_and_included_titles(titles: List[str], symbols: List[str]) -> Tuple[List[str], List[str]]:
+def clean_alt_and_included_titles(
+    titles: List[str], symbols: List[str], word_replacements: Dict[str, str]
+) -> Tuple[List[str], List[str]]:
     """Remove ', INCLUDED' and ', FORMERLY' suffixes from titles/symbols & misc title reformatting"""
     # remove ', included' and ', formerly', if present
     titles2 = [remove_included_and_formerly_suffixes(x) for x in titles]
     symbols2 = [remove_included_and_formerly_suffixes(x) for x in symbols]
     # additional reformatting for titles
-    titles3 = [cleanup_title(x) for x in titles2]
+    titles3 = [cleanup_title(x, word_replacements=word_replacements) for x in titles2]
     return titles3, symbols2
 
 
@@ -369,7 +216,9 @@ def parse_title_symbol_pairs(title_symbol_pairs_str: str) -> Tuple[List[str], Li
     return titles, symbols
 
 
-def get_alt_and_included_titles_and_symbols(title_symbol_pair_str) -> Tuple[List[str], List[str], List[str], List[str]]:
+def get_alt_and_included_titles_and_symbols(
+    title_symbol_pair_str, word_replacements: Dict[str, str]
+) -> Tuple[List[str], List[str], List[str], List[str]]:
     """Separates different types of titles/symbols, and cleans them."""
     titles: List[str] = []
     symbols: List[str] = []
@@ -378,105 +227,6 @@ def get_alt_and_included_titles_and_symbols(title_symbol_pair_str) -> Tuple[List
     if title_symbol_pair_str:
         titles, symbols = parse_title_symbol_pairs(title_symbol_pair_str)
         titles, symbols, former_titles, former_symbols = separate_former_titles_and_symbols(titles, symbols)
-        titles, symbols = clean_alt_and_included_titles(titles, symbols)
-        former_titles, former_symbols = clean_alt_and_included_titles(former_titles, former_symbols)
+        titles, symbols = clean_alt_and_included_titles(titles, symbols, word_replacements)
+        former_titles, former_symbols = clean_alt_and_included_titles(former_titles, former_symbols, word_replacements)
     return titles, symbols, former_titles, former_symbols
-
-
-def get_mapped_gene_ids(entry) -> List[str]:
-    """Get mapped gene IDs from an OMIM entry"""
-    gene_ids = entry.get('externalLinks', {}).get('geneIDs', '')
-    return [s.strip() for s in gene_ids.split(',')]
-
-
-def get_pubs(entry) -> List[str]:
-    """Get pubmed information from an OMIM entry"""
-    result = []
-    for rlst in entry.get('referenceList', []):
-        if 'pubmedID' in rlst['reference']:
-            result.append(str(rlst['reference']['pubmedID']))
-    return result
-
-
-def get_mapped_ids(entry) -> Dict[Namespace, List[str]]:
-    """Get mapped IDs from an OMIM entry"""
-    external_links = entry.get('externalLinks', {})
-    result = defaultdict(list)
-    if 'orphanetDiseases' in external_links:
-        for item in external_links['orphanetDiseases'].strip().split(';;;'):  # Separates multiple Orphanet entries, e.g. '634475;;31692;;Mosaic NF2-related schwannomatosis;;;637;;183;;Full NF2-related schwannomatosis'
-            result[ORPHANET].append(item.split(';;')[0].strip())  # e.g. '634475;;31692;;Mosaic NF2-related schwannomatosis'
-    if 'umlsIDs' in external_links:
-        result[UMLS] = external_links['umlsIDs'].split(',')
-    return result
-
-
-def get_phenotypic_series(entry) -> List[str]:
-    """Get phenotypic series info from an OMIM entry"""
-    result = []
-    for pheno in entry.get('phenotypeMapList', []):
-        if 'phenotypicSeriesNumber' in pheno['phenotypeMap']:
-            result.extend(pheno['phenotypeMap']['phenotypicSeriesNumber'].split(','))
-    for pheno in entry.get('geneMap', {}).get('phenotypeMapList', []):
-        if 'phenotypicSeriesNumber' in pheno['phenotypeMap']:
-            result.extend(pheno['phenotypeMap']['phenotypicSeriesNumber'].split(','))
-    return list(set(result))
-
-
-# noinspection PyUnusedLocal
-def get_process_allelic_variants(entry) -> List:
-    """Process allelic variants from an OMIM entry"""
-    # Not sure when/if Dazhi intended to use this - joeflack4 2021/12/20
-    return []
-
-
-def get_self_ref_assocs(phenotype_mim: str, gene_phenotypes: Dict[str, Dict]) -> List[Dict]:
-    """Find any cases where it appears that there is a self-referential gene-disease association"""
-    if phenotype_mim not in gene_phenotypes:
-        return []
-    _assocs = gene_phenotypes[phenotype_mim]['phenotype_associations']
-    _self_ref_assocs = []
-    for _assoc in _assocs:
-        if not _assoc['phenotype_mim_number']:
-            _self_ref_assocs.append(_assoc)
-    return _self_ref_assocs
-
-
-def _add_to_review_tsv(class_code: int, value: str):
-    """Update REVIEW_CASES with review cases, which will later be written to review.tsv"""
-    REVIEW_CASES.append({
-        "classCode": class_code,
-        "classShortName": REVIEW_CASE_NAME_MAP[class_code],
-        "value": value,
-    })
-
-
-def log_review_cases(
-    p_mim: str, p_lab: str, p_map_key: str, gene_mim: str, gene_phenotypes: Dict[str, Dict],
-    omim_types: Dict[str, str]
-):
-    """Log cases that need to be reviewed"""
-    global REVIEW_SELF_REF_CASE_I
-    p_lab_lower: str = p_lab.lower()
-    basic_review_info = f"(Phenotype: {p_mim} {p_lab}), (Map key: {p_map_key}), (Gene: {gene_mim})"
-
-    # - Digenic: Should technically be none marked 'digenic' if only 1 association, but there are.
-    if 'digenic' in p_lab_lower:
-        _add_to_review_tsv(1, basic_review_info)
-    # = Somatic mutations
-    if 'somatic' in p_lab_lower:
-        _add_to_review_tsv(3, basic_review_info)
-    # - Self-referential cases
-    self_ref_assocs: List[Dict] = get_self_ref_assocs(p_mim, gene_phenotypes)
-    if self_ref_assocs:
-        REVIEW_SELF_REF_CASE_I += 1
-        _add_to_review_tsv(2, f"{REVIEW_SELF_REF_CASE_I}: {basic_review_info}")
-    for self_ref_assoc in self_ref_assocs:
-        _add_to_review_tsv(2, f"{REVIEW_SELF_REF_CASE_I}: (Phenotype: {self_ref_assoc['phenotype_label']}), (Map key: "
-            f"{self_ref_assoc['phenotype_mapping_info_key']}), (Gene: {p_mim})", )
-    # - Unexpected non-phenotype MIM types
-    p_mim_type: str = omim_types[p_mim]  # Allowable: PHENOTYPE, HERITABLE_PHENOTYPIC_MARKER (#, %)
-    mim_type_err = f"(Phenotype MIM type {p_mim_type}), {basic_review_info}"
-    if p_mim_type == 'GENE':  # Represented by: *
-        _add_to_review_tsv(4, mim_type_err)
-    elif p_mim_type in ('OBSOLETE', 'SUSPECTED', 'HAS_AFFECTED_FEATURE'):  # Represented by: ^, NULL, +
-        _add_to_review_tsv(5, mim_type_err)
