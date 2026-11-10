@@ -41,3 +41,9 @@ morbidmap-protected-added-with-header.tsv
 /*.tsv
 /*.ttl
 /*.txt
+
+# Golden-file capture: licensed inputs and the outputs derived from them
+/omim-data/
+/golden/inputs/
+/golden/out/
+/golden/work/

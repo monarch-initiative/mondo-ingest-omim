@@ -1,4 +1,4 @@
-.PHONY: all help install test scrape get-pmids cleanup
+.PHONY: all help install test scrape get-pmids cleanup golden
 
 
 # MAIN COMMANDS / GOALS ------------------------------------------------------------------------------------------------
@@ -103,6 +103,10 @@ install:
 # QA / TESTING ---------------------------------------------------------------------------------------------------------
 test:
 	 python3 -m unittest discover -v
+
+# Capture golden outputs from the legacy pipeline on main. Needs Docker and OMIM's downloads in omim-data/
+golden:
+	golden/capture.sh
 
 # HELP -----------------------------------------------------------------------------------------------------------------
 help:
