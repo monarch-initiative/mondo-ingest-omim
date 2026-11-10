@@ -5,7 +5,9 @@ description = "Transforms OMIM's downloads into OWL and TSV artefacts for the Mo
 readme = "README.md"
 # The release build runs inside obolibrary/odkfull, which ships Python 3.12.
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "sssom>=0.4.17",
+]
 
 [dependency-groups]
 dev = ["pytest>=8"]

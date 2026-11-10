@@ -1,24 +1,33 @@
 """Fixtures are synthetic: identifiers in ranges their namespaces do not use, and invented names."""
+import io
+
 import pytest
+from sssom_schema import Mapping
 
 from omim2obo.parse.reference import (
-    HgncGene, Mapping, PubmedReference, parse_entry_mappings, parse_hgnc, parse_pubmed_refs, parse_sssom)
+    HgncGene, PubmedReference, parse_entry_mappings, parse_hgnc, parse_pubmed_refs, parse_sssom)
+
+
+def mapping(subject_id, object_id, justification, **labels) -> Mapping:
+    return Mapping(subject_id=subject_id, predicate_id='skos:exactMatch', object_id=object_id,
+                   mapping_justification=justification, **labels)
 
 
 def test_sssom_metadata_header_is_skipped_and_labels_kept():
-    assert parse_sssom([
+    assert parse_sssom(io.StringIO(''.join([
         '# curie_map:\n',
         '#   MONDO: http://purl.obolibrary.org/obo/MONDO_\n',
+        '#   OMIM: https://omim.org/entry/\n',
+        '#   OMIMPS: https://omim.org/phenotypicSeries/PS\n',
         '# mapping_set_id: http://example.org/mappings.sssom.tsv\n',
         'subject_id\tsubject_label\tpredicate_id\tobject_id\tobject_label\tmapping_justification\n',
         'MONDO:9900001\twobbly knee syndrome\tskos:exactMatch\tOMIM:900001\tWobbly knee syndrome'
         '\tsemapv:ManualMappingCuration\n',
         'MONDO:9900002\t\tskos:exactMatch\tOMIMPS:900001\t\tsemapv:ManualMappingCuration\n',
-    ]) == [
-        Mapping('MONDO:9900001', 'skos:exactMatch', 'OMIM:900001', 'wobbly knee syndrome',
-                'Wobbly knee syndrome', 'semapv:ManualMappingCuration'),
-        Mapping('MONDO:9900002', 'skos:exactMatch', 'OMIMPS:900001', None, None,
-                'semapv:ManualMappingCuration'),
+    ]))) == [
+        mapping('MONDO:9900001', 'OMIM:900001', 'semapv:ManualMappingCuration',
+                subject_label='wobbly knee syndrome', object_label='Wobbly knee syndrome'),
+        mapping('MONDO:9900002', 'OMIMPS:900001', 'semapv:ManualMappingCuration'),
     ]
 
 
@@ -29,10 +38,10 @@ def test_entry_mappings_are_one_per_identifier():
         '900002\tTrue\t2026-01-01\t\t\n',
         '900100\tFalse\t2026-01-01\t\t99002\n',
     ]) == [
-        Mapping('OMIM:900001', 'skos:exactMatch', 'UMLS:C9900001'),
-        Mapping('OMIM:900001', 'skos:exactMatch', 'UMLS:C9900002'),
-        Mapping('OMIM:900001', 'skos:exactMatch', 'Orphanet:99001'),
-        Mapping('OMIM:900100', 'skos:exactMatch', 'Orphanet:99002'),
+        mapping('OMIM:900001', 'UMLS:C9900001', 'semapv:UnspecifiedMatching'),
+        mapping('OMIM:900001', 'UMLS:C9900002', 'semapv:UnspecifiedMatching'),
+        mapping('OMIM:900001', 'Orphanet:99001', 'semapv:UnspecifiedMatching'),
+        mapping('OMIM:900100', 'Orphanet:99002', 'semapv:UnspecifiedMatching'),
     ]
 
 

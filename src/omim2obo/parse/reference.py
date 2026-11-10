@@ -1,34 +1,19 @@
-"""Reference data from outside OMIM's downloads: mappings to other vocabularies, citations, and HGNC."""
+"""Reference data from outside OMIM's downloads: mappings to other vocabularies, citations, and HGNC.
+
+Mappings are SSSOM's own `Mapping`, read and in time written by the sssom package.
+"""
 import csv
 from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import TextIO
+
+from sssom.parsers import parse_sssom_table
+from sssom_schema import Mapping
 
 
-@dataclass(frozen=True, slots=True)
-class Mapping:
-    """A statement that two identifiers, given as CURIEs, denote the same thing. Fields are SSSOM's."""
-    subject_id: str
-    predicate_id: str
-    object_id: str
-    subject_label: str | None = None
-    object_label: str | None = None
-    mapping_justification: str | None = None
-
-
-def parse_sssom(lines: Iterable[str]) -> list[Mapping]:
-    """An SSSOM TSV, such as the OMIM mappings Mondo publishes. Its `#` metadata header is skipped."""
-    table = csv.DictReader((line for line in lines if not line.startswith('#')), delimiter='\t')
-    return [
-        Mapping(
-            subject_id=row['subject_id'],
-            predicate_id=row['predicate_id'],
-            object_id=row['object_id'],
-            subject_label=row['subject_label'] or None,
-            object_label=row['object_label'] or None,
-            mapping_justification=row['mapping_justification'] or None,
-        )
-        for row in table
-    ]
+def parse_sssom(file: TextIO) -> list[Mapping]:
+    """An SSSOM TSV, such as the OMIM mappings Mondo publishes."""
+    return parse_sssom_table(file).to_mappings()
 
 
 def parse_entry_mappings(lines: Iterable[str]) -> list[Mapping]:
@@ -36,9 +21,16 @@ def parse_entry_mappings(lines: Iterable[str]) -> list[Mapping]:
 
         mim     is_phenotype  date_fetched  umls_ids           orphanet_ids
         900001  True          2026-01-01    C9900001|C9900002  99001
+
+    OMIM does not say how it arrived at these, hence the justification.
     """
     return [
-        Mapping(f'OMIM:{row["mim"]}', 'skos:exactMatch', f'{prefix}:{local_id}')
+        Mapping(
+            subject_id=f'OMIM:{row["mim"]}',
+            predicate_id='skos:exactMatch',
+            object_id=f'{prefix}:{local_id}',
+            mapping_justification='semapv:UnspecifiedMatching',
+        )
         for row in csv.DictReader(lines, delimiter='\t')
         for prefix, column in (('UMLS', 'umls_ids'), ('Orphanet', 'orphanet_ids'))
         for local_id in _pipe_separated(row[column])
