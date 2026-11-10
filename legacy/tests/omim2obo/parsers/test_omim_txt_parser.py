@@ -29,7 +29,7 @@ def test_parse_omim_id_4():
 
 
 def test_parse_mim_titles():
-    with open(ROOT_DIR / 'tests/files/mimTitles.txt', 'r') as fin:
+    with open(ROOT_DIR / 'legacy/tests/files/mimTitles.txt', 'r') as fin:
         lines = fin.readlines()
     omim_type, omim_replaced = parse_mim_titles(lines)
     assert len(omim_type) > 27000
@@ -40,7 +40,7 @@ def test_parse_mim_titles():
 
 
 def test_parse_morbid_map():
-    with open(ROOT_DIR / 'tests/files/morbidmap.txt', 'r') as fin:
+    with open(ROOT_DIR / 'legacy/tests/files/morbidmap.txt', 'r') as fin:
         lines = fin.readlines()
     morbid_map = parse_morbid_map(lines)
     print(morbid_map)

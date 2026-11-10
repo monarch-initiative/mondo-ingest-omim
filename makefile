@@ -1,3 +1,6 @@
+# The existing pipeline lives in legacy/ while it is being rewritten
+export PYTHONPATH := legacy
+
 .PHONY: all help install test scrape get-pmids cleanup golden
 
 
@@ -102,7 +105,7 @@ install:
 
 # QA / TESTING ---------------------------------------------------------------------------------------------------------
 test:
-	 python3 -m unittest discover -v
+	 python3 -m unittest discover -v -s legacy/tests -t legacy
 
 # Capture golden outputs from the legacy pipeline on main. Needs Docker and OMIM's downloads in omim-data/
 golden:

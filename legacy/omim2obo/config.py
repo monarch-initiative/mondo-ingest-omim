@@ -5,7 +5,7 @@ from typing import Optional, TypedDict
 import yaml
 from dotenv import dotenv_values
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parents[2]  # the repository root, not legacy/
 DATA_DIR = ROOT_DIR / 'data'
 ENV_PATH = ROOT_DIR / '.env'
 REVIEW_CASES_PATH = ROOT_DIR / 'review.tsv'

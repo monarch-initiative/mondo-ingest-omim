@@ -50,7 +50,8 @@ cp golden/run_legacy.py "$work/"
 
 # omim.ttl is built by run_legacy.py rather than by its make target, which re-downloads every input.
 # With it in place, make builds only what is derived from it.
-docker run --rm -v "$PWD/$work:/work" -w /work -e ROBOT_JAVA_ARGS=-Xmx8G "$image" sh -ec '
+# PYTHONPATH covers refs where the pipeline has moved to legacy/; it is inert on those where it has not.
+docker run --rm -v "$PWD/$work:/work" -w /work -e ROBOT_JAVA_ARGS=-Xmx8G -e PYTHONPATH=legacy "$image" sh -ec '
     python3 run_legacy.py
     make omim.owl mondo-omim-genes.robot.tsv disease-gene-relationships-qc.tsv
     {
