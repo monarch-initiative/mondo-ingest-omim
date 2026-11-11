@@ -10,54 +10,47 @@ This repository transforms OMIM (Online Mendelian Inheritance in Man) data into 
 
 ## Common Commands
 
-**Build Commands:**
-- `make all` - Creates all release artifacts (omim.ttl, omim.sssom.tsv, omim.owl, mondo-omim-genes.robot.tsv)
-- `make omim.ttl` or `python -m omim2obo` - Main build command (downloads data and generates omim.ttl)
-- `python -m omim2obo --use-cache` - Offline build using cached data files
-- `sh run.sh make all` - Runs build in Docker container using ODK
+The release build runs in the ODK container: prefix `make` with `sh run.sh`. Development outside it
+uses uv.
 
-**Development Commands:**
-- `make install` - Install Python dependencies
-- `make test` - Run unit tests using Python unittest
-- `python -m pytest tests/` - Run specific tests
-- `make scrape y=2021 m=5` - Web scraping for OMIM statistics (YYYY/MM format)
-- `make get-pmids` - Extract OMIM codes and PMIDs
-
-**Lint/Type Check Commands:**
-When making code changes, run basic Python validation:
-- `python -m py_compile omim2obo/main.py` - Check syntax
-- `python -m omim2obo.parsers.omim_txt_parser` - Test parser modules
+- `make all` - Fetch the latest inputs, then build every release artefact
+- `make fetch` / `python -m omim2obo fetch` - Download OMIM's files (keys in `.env`), Mondo's mappings
+  and HGNC; refresh the PubMed/UMLS/Orphanet cache in `data/`
+- `make -B omim.owl` - Build from files on disk: `python -m omim2obo build` writes `omim.nt` and the
+  TSVs, `robot convert` turns `omim.nt` into `omim.owl`
+- `uv run pytest` (or `make test` in the container) - Tests, all on synthetic fixtures
+- `uv run ruff format` and `uv run ruff check` - Formatter and linter; both are checked in CI
+- `make golden` - Rebuild the pre-rewrite pipeline's outputs into `golden/out/` for comparison
+- `make test-legacy`, `make scrape`, `make get-pmids` - Run against `legacy/`
 
 ## Architecture
 
-### Core Processing Flow
+The code is in `src/omim2obo`. `legacy/` holds the pipeline it replaced and is to be deleted.
 
-1. **Data Download**: Retrieves OMIM files (mimTitles.txt, morbidmap.txt, mim2gene.txt) and HGNC data
-2. **Parsing**: Transforms text files into structured data using specialized parsers
-3. **Relationship Mapping**: Applies MORBIDMAP phenotype mapping keys to Relationship Ontology predicates:
-   - Key 2 → RO:0003303 (causes condition)
-   - Key 3 → RO:0004013/RO:0004003 (causal germline mutation relationships)
-   - Key 4 → RO:0003304 (contributes to condition)
-   - Multiple associations → RO:0003302 (causes or contributes to condition)
-4. **Quality Control**: Generates review cases for curator attention
-5. **Output Generation**: Creates RDF/OWL files and ROBOT templates
+Records in, records out, pure functions between them; OWL is one rendering at the end.
 
-### Key Modules
+1. **Parse** (`parse/`): each input file becomes a list of frozen dataclasses. `parse/omim.py` for
+   OMIM's downloads, `parse/curation.py` for the curated TSVs, `parse/reference.py` for mappings,
+   PubMed references and HGNC.
+2. **Classify** (`associations.py`): morbidmap rows plus the protected and exclusion files become
+   `Association` records, each with a predicate and a typed provenance (`OmimMorbidmap`,
+   `CuratorProtected`, `CuratorExcluded`). The mapping-key rules are in `predicates.py`:
+   - Key 2 → RO:0003303, key 4 → RO:0003304, when it is the phenotype's only row
+   - Key 3, only row, definitive label → RO:0004003 (rendered with its inverse RO:0004013)
+   - Otherwise, or if the phenotype is excluded → RO:0003302
+   - A protected pair is always RO:0004003
+3. **Project** (`project.py`): associations and Mondo's mappings become `MondoGeneRow`s.
+4. **Render** (`render/owl.py`, `render/tsv.py`): `Release` (`release.py`) gathers everything a build
+   is rendered from; `render_owl` turns it into an rdflib graph, the TSV renderers into text.
+   `review.py` lists associations for curators to check.
 
-**`omim2obo/main.py`**: Core processing logic with `omim2obo()` function
-- Entry point for all data transformation
-- Contains disease-gene association logic with curator override handling
-- Manages RDF graph construction and serialization
+Also: `titles.py` cleans OMIM's ALL CAPS titles, `genes.py` resolves gene entries to HGNC,
+`prefixes.py` is the one CURIE prefix map, `fetch.py` / `omim_client.py` / `api_entry.py` /
+`config.py` talk to OMIM.
 
-**`omim2obo/parsers/`**: Specialized parsers for OMIM data formats
-- `omim_txt_parser.py`: Handles OMIM text file formats (mimTitles, morbidmap, etc.)
-- `omim_entry_parser.py`: Processes individual entries and handles capitalization rules
-
-**`omim2obo/config.py`**: Configuration management and file paths
-- Defines data directories and output paths
-- Manages environment variables and API configuration
-
-**`omim2obo/namespaces.py`**: RDF namespace definitions for extensive ontology coverage
+Code marked `QUIRK` reproduces legacy behaviour that looks wrong but is needed for output parity; do
+not fix one in passing. Files carried over from legacy keep their `git blame` history
+(`.git-blame-ignore-revs` lists the reformatting commits).
 
 ### Curator Override System
 
@@ -66,56 +59,23 @@ Three key TSV files allow manual curation interventions:
 - `data/protected-disease-gene.tsv`: Protect associations from automated removal
 - `data/known_capitalizations.tsv`: Override automatic capitalization
 
-## Data Processing Patterns
-
-### OMIM Entry Types
-- `*` (GENE) and `+` (HAS_AFFECTED_FEATURE): Gene entries with SO:0000704 classification
-- `#` (PHENOTYPE): Disease/phenotype entries with biolink:Disease category
-- `%` (HERITABLE_PHENOTYPIC_MARKER): Also classified as biolink:Disease
-- NULL (SUSPECTED): Excluded with MONDO:excludeTrait
-
-### Disease-Gene Association Rules
-- Single association with mapping key 3 + definitive phenotype label → Causal germline mutation (RO:0004013/RO:0004003)
-- Multiple associations or non-definitive → Generic cause/contribute relationship (RO:0003302)
-- Curator exclusions override automated logic
-
-### Review Case Generation
-The system flags edge cases in `review.tsv`:
-- **D2G: digenic**: Single gene entries incorrectly labeled as digenic
-- **D2G: self-referential**: Complex circular reference patterns
-- **D2G: somatic**: Somatic vs germline mutation conflicts
+## OMIM Entry Types (`entry_prefix.py`)
+- `*` (GENE) and `+` (GENE_AND_PHENOTYPE): gene entries, subclasses of SO:0000704, biolink:Gene
+- `#` (PHENOTYPE) and `%` (PHENOTYPE_OR_LOCUS): biolink:Disease
+- no prefix (OTHER): excluded with MONDO:excludeTrait
+- `^`: removed or moved; a deprecated class pointing to its replacements
 
 ## Configuration Files
+- `.env` (from `.env.example`): OMIM download and API keys. Never read or print it.
+- `pyproject.toml`, `uv.lock`: dependencies, pytest and ruff settings. Dependency floors match what
+  the ODK container ships, because the release build uses its system Python.
+- `makefile`: build targets
+- `data/metadata.sssom.yml`: metadata for `omim.sssom.tsv`, still built by `robot` + `sssom parse`
 
-**Core Configuration:**
-- `.env` (from `.env.example`): API keys and environment settings
-- `data/dipper/curie_map.yaml`: CURIE to URI mappings for RDF namespaces
-- `data/metadata.sssom.yml`: SSSOM mapping metadata
-
-**Build Configuration:**
-- `makefile`: Build targets and dependency management
-- `requirements.txt`: Python dependencies
-- `pytest.ini`: Test configuration
-
-## Development Notes
-
-### RDF Graph Construction
-- Uses custom `DeterministicBNode` class for reproducible builds
-- All relationship assertions include evidence annotations
-- Ontology IRI: `http://purl.obolibrary.org/obo/mondo/omim.owl`
-- Version IRI follows pattern: `http://purl.obolibrary.org/obo/mondo/releases/{YYYY-MM-DD}/omim.owl`
-
-### Testing
-- Unit tests in `tests/` directory with sample OMIM entry JSON files
-- Test different OMIM entry types (%, *, +, #, ^, NULL)
-- Focus on parser logic and utility functions
-
-### Error Handling
-- Structured logging with appropriate levels for debugging
-- Review case system captures problematic associations for curator review
-- Validation of required fields and data integrity checks
-
-### Docker Integration
-- ODK (Ontology Development Kit) based containerized workflow
-- `run.sh` script provides Docker wrapper for build commands
-- Ensures reproducible builds across environments
+## Notes
+- OMIM's downloads are licensed and gitignored; never commit them. Tests use synthetic fixtures (MIM
+  numbers 9xxxxx).
+- Ontology IRI `http://purl.obolibrary.org/obo/mondo/omim.owl`; version IRI
+  `http://purl.obolibrary.org/obo/mondo/releases/{YYYY-MM-DD}/omim.owl`, from `build --version`.
+- The graph is written as N-Triples so that no prefixes reach `omim.owl`, keeping its text
+  comparable between releases.

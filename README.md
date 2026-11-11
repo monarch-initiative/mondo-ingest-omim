@@ -18,30 +18,26 @@ one at https://omim.org/downloads. This will probably be sufficient for the purp
 of downloading the necessary text files, but if not, you can also require access to
 the REST API as well: https://omim.org/api.
    
-### 2. Python dependencies
-#### 2.1 Python installation
-- [RealPython blog install guide](https://realpython.com/installing-python/): My preferred guide for installing on Windows or Mac
-- [Python documentation for installing on Windows](https://docs.python.org/3/using/windows.html)
-- [Python documentation for installing on Mac](https://docs.python.org/3/using/mac.html)
+### 2. Dependencies
+The release build runs in the [ODK](https://github.com/INCATools/ontology-development-kit) container
+(`sh run.sh ...`), which has `robot` and every Python package the build needs. Nothing is installed.
 
-#### 2.2 Setup virtual environment & installing packages
-1. Run: `make install`
-2. There is a known possible issue with dependency `psutil` on some systems. If 
-you get an error related to this when installing, ignore it, as it is does not 
-seem to be needed to run any of the tools. If however you do get a `psutil` error
-when running anything, please let us know by [creating an issue](https://github.com/monarch-initiative/omim/issues/new).
+To work on the code outside the container, install [uv](https://docs.astral.sh/uv/) and run
+`make install` (`uv sync`). Then `uv run pytest` runs the tests and `uv run ruff check` the linter.
 
 ## Running & creating release
 Run: `sh run.sh make all`
 
-Running this will create new release artefacts in the root directory.
+This downloads the latest files from omim.org, Mondo and HGNC, refreshes the cache of PubMed
+references and UMLS / Orphanet mappings in `data/`, and writes new release artefacts to the root
+directory.
 
-You can also run `make build` or `python -m omim2obo`. These are all the same 
-command. This will download files from omim.org and run the build.
+The two halves can be run separately:
+- `sh run.sh make fetch`: only the downloads and cache refresh (`python -m omim2obo fetch`).
+- `sh run.sh make -B omim.owl`: only the build, from the files already on disk
+  (`python -m omim2obo build`, then `robot convert`). Use this if you are offline.
 
-Offline/cache option: `python -m omim2obo --use-cache`
-If there's an issue downloading the files, or you are offline, or you just want 
-to use the cache anyway, you can pass the `--use-cache` flag.
+The code is in `src/omim2obo`. The pipeline it replaces is kept in `legacy/` for the time being.
 
 ## Curator configuration files
 **[protected-disease-gene.tsv](https://github.com/monarch-initiative/omim/blob/main/data/protected-disease-gene.tsv)**
@@ -120,7 +116,7 @@ code_tuples = get_codes_by_yyyy_mm('2021/05')
 </details> 
 
 ## Release files
-- `omim.ttl`: OMIM ontologized
+- `omim.owl`: OMIM ontologized
 - `omim.sssom.tsv`: SSSOM mapping file
 - `mondo-omim-genes.robot.tsv`: ROBOT template for adding OMIM genes to Mondo
 - `review.tsv`: Special cases to consider for manual review
