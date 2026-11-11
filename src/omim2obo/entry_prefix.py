@@ -39,3 +39,11 @@ class EntryPrefix(Enum):
     PHENOTYPE = 'Number Sign'  # #
     PHENOTYPE_OR_LOCUS = 'Percent'  # %
     OTHER = 'NULL'  # ''
+
+
+BIOLINK_CATEGORY = {
+    EntryPrefix.GENE: 'Gene',
+    EntryPrefix.GENE_AND_PHENOTYPE: 'Gene',
+    EntryPrefix.PHENOTYPE: 'Disease',
+    EntryPrefix.PHENOTYPE_OR_LOCUS: 'Disease',
+}

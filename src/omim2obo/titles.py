@@ -26,6 +26,16 @@ class EntryTitles:
     alternative: TitleGroup
     included: TitleGroup
 
+    @property
+    def label(self) -> str:
+        """A gene goes by its symbol, anything else by its title."""
+        is_gene = self.prefix in (EntryPrefix.GENE, EntryPrefix.GENE_AND_PHENOTYPE)
+        return (
+            self.preferred_symbols[0]
+            if is_gene and self.preferred_symbols
+            else self.preferred_title
+        )
+
 
 def entry_titles(row: TitleRow, capitalizations: dict[str, str]) -> EntryTitles:
     preferred_title, *preferred_symbols = [x.strip() for x in row.preferred.split(';')]
