@@ -30,7 +30,7 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 extend-exclude = [
-    "analyses", "dev", "*.ipynb", "*.md",
+    "dev", "*.md",
     "src/omim2obo/romanplus.py",    # third-party code, kept as it came
 ]
 

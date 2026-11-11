@@ -9,10 +9,6 @@ __pycache__/
 # Specialized
 .git.bfg-report/
 *ignore/
-analyses/**/*.ipynb_checkpoints
-analyses/**/*.tsv
-analyses/**/*.csv
-analyses/**/*.xls
 /*.diff
 
 # Inputs
