@@ -279,20 +279,28 @@ def test_entry_titles():
         prefix=EntryPrefix.PHENOTYPE,
         preferred_title='wobbly knee syndrome',
         preferred_symbols=('WKS',),
-        alternative=TitleGroup(('knee wobble of Behcet',), (), ('genu instabile',), ('GI',)),
+        alternative=TitleGroup(
+            titles=('knee wobble of Behcet',),
+            symbols=(),
+            former_titles=('genu instabile',),
+            former_symbols=('GI',),
+        ),
         included=TitleGroup(
-            ('wobbly knee syndrome, type a1', 'wobbly knee syndrome, type 2'), ('WKSA1',), (), ()
+            titles=('wobbly knee syndrome, type a1', 'wobbly knee syndrome, type 2'),
+            symbols=('WKSA1',),
+            former_titles=(),
+            former_symbols=(),
         ),
     )
 
 
 def test_entry_titles_symbol_from_one_field_recapitalizes_titles_in_another():
     row = TitleRow(
-        EntryPrefix.PHENOTYPE,
-        '900001',
-        'WKS DEFICIENCY',
-        'KNEE WOBBLE; WKS',
-        'WKS DEFECT, INCLUDED',
+        prefix=EntryPrefix.PHENOTYPE,
+        mim='900001',
+        preferred='WKS DEFICIENCY',
+        alternative='KNEE WOBBLE; WKS',
+        included='WKS DEFECT, INCLUDED',
     )
     titles = entry_titles(row, {})
     assert titles.preferred_title == 'WKS deficiency'
@@ -300,8 +308,19 @@ def test_entry_titles_symbol_from_one_field_recapitalizes_titles_in_another():
 
 
 def test_entry_titles_without_alternative_or_included():
-    row = TitleRow(EntryPrefix.GENE, '900100', 'FAKE GENE 1; FAKE1', '', '')
-    empty = TitleGroup((), (), (), ())
+    row = TitleRow(
+        prefix=EntryPrefix.GENE,
+        mim='900100',
+        preferred='FAKE GENE 1; FAKE1',
+        alternative='',
+        included='',
+    )
+    empty = TitleGroup(titles=(), symbols=(), former_titles=(), former_symbols=())
     assert entry_titles(row, {}) == EntryTitles(
-        '900100', EntryPrefix.GENE, 'fake gene 1', ('FAKE1',), empty, empty
+        mim='900100',
+        prefix=EntryPrefix.GENE,
+        preferred_title='fake gene 1',
+        preferred_symbols=('FAKE1',),
+        alternative=empty,
+        included=empty,
     )

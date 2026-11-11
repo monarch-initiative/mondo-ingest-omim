@@ -10,7 +10,7 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class ProtectedRow:
     """One line of protected-disease-gene.tsv: a disease-gene association a curator has asserted,
     to be kept whatever OMIM's files say."""
@@ -29,7 +29,7 @@ class ProtectedRow:
     comment: str
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class ExclusionRow:
     """One line of exclusions-disease-gene.tsv: a phenotype for which a curator has rejected the
     disease-gene associations the pipeline would otherwise assert."""

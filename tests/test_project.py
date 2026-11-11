@@ -4,23 +4,42 @@ from omim2obo.parse.reference import Mapping
 from omim2obo.predicates import Predicate
 from omim2obo.project import MondoGeneRow, project, susceptibility_subset
 
-OMIM_SAYS = OmimMorbidmap(MappingKey.MOLECULAR_BASIS_KNOWN, 'Wobbly knee syndrome')
+OMIM_SAYS = OmimMorbidmap(
+    mapping_key=MappingKey.MOLECULAR_BASIS_KNOWN, phenotype_label='Wobbly knee syndrome'
+)
 
 
 def mondo(mondo_id, mim) -> Mapping:
-    return Mapping(mondo_id, 'skos:exactMatch', f'OMIM:{mim}', 'semapv:ManualMappingCuration')
+    return Mapping(
+        subject_id=mondo_id,
+        predicate_id='skos:exactMatch',
+        object_id=f'OMIM:{mim}',
+        mapping_justification='semapv:ManualMappingCuration',
+    )
 
 
 def hgnc(mim, hgnc_id) -> Mapping:
-    return Mapping(f'OMIM:{mim}', 'skos:exactMatch', hgnc_id, 'semapv:UnspecifiedMatching')
+    return Mapping(
+        subject_id=f'OMIM:{mim}',
+        predicate_id='skos:exactMatch',
+        object_id=hgnc_id,
+        mapping_justification='semapv:UnspecifiedMatching',
+    )
 
 
 def germline(gene='900100', provenance=OMIM_SAYS) -> Association:
-    return Association('900001', gene, Predicate.GERMLINE_MUTATION, provenance)
+    return Association(
+        phenotype_mim='900001',
+        gene_mim=gene,
+        predicate=Predicate.GERMLINE_MUTATION,
+        provenance=provenance,
+    )
 
 
 def protected(mondo_id, hgnc_id) -> CuratorProtected:
-    return CuratorProtected(None, 'included entry', mondo_id, hgnc_id, omim=None)
+    return CuratorProtected(
+        orcid=None, protection_type='included entry', mondo_id=mondo_id, hgnc_id=hgnc_id, omim=None
+    )
 
 
 MONDO = [mondo('MONDO:9900001', '900001')]
@@ -29,12 +48,22 @@ HGNC = [hgnc('900100', 'HGNC:99901')]
 
 def test_association_lands_on_the_mapped_class_and_gene():
     assert project([germline()], MONDO, HGNC) == {
-        MondoGeneRow('MONDO:9900001', 'HGNC:99901', '900001', '900100')
+        MondoGeneRow(
+            mondo_id='MONDO:9900001',
+            hgnc_id='HGNC:99901',
+            phenotype_mim='900001',
+            gene_mim='900100',
+        )
     }
 
 
 def test_only_germline_mutation_is_projected():
-    hedge = Association('900001', '900100', Predicate.CAUSES_OR_CONTRIBUTES, OMIM_SAYS)
+    hedge = Association(
+        phenotype_mim='900001',
+        gene_mim='900100',
+        predicate=Predicate.CAUSES_OR_CONTRIBUTES,
+        provenance=OMIM_SAYS,
+    )
     assert project([hedge], MONDO, HGNC) == set()
 
 
@@ -46,7 +75,12 @@ def test_unmapped_phenotype_or_gene_is_dropped():
 def test_protected_row_supplies_its_own_class_and_gene():
     association = germline(provenance=protected('MONDO:9900002', 'HGNC:99901'))
     assert project([association], [], []) == {
-        MondoGeneRow('MONDO:9900002', 'HGNC:99901', '900001', '900100')
+        MondoGeneRow(
+            mondo_id='MONDO:9900002',
+            hgnc_id='HGNC:99901',
+            phenotype_mim='900001',
+            gene_mim='900100',
+        )
     }
 
 
@@ -74,7 +108,12 @@ def test_protected_association_still_reaches_the_mapped_class():
 
 def morbidmap(label, phenotype='900001') -> MorbidmapRow:
     return MorbidmapRow(
-        label, phenotype, MappingKey.MOLECULAR_BASIS_KNOWN, ('WBK1',), '900100', '1p36'
+        phenotype_label=label,
+        phenotype_mim=phenotype,
+        mapping_key=MappingKey.MOLECULAR_BASIS_KNOWN,
+        gene_symbols=('WBK1',),
+        gene_mim='900100',
+        cyto_location='1p36',
     )
 
 

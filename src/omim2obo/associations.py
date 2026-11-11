@@ -13,7 +13,7 @@ from omim2obo.predicates import (
 )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class OmimMorbidmap:
     """OMIM says so, in a row of morbidmap."""
 
@@ -21,7 +21,7 @@ class OmimMorbidmap:
     phenotype_label: str
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class CuratorProtected:
     """A curator asserted it, in protected-disease-gene.tsv."""
 
@@ -33,7 +33,7 @@ class CuratorProtected:
     """The morbidmap row for the same phenotype and gene, if OMIM has one."""
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class CuratorExcluded:
     """OMIM says so, but a curator has excluded the phenotype, which weakens it to the hedge."""
 
@@ -45,7 +45,7 @@ class CuratorExcluded:
 type Provenance = OmimMorbidmap | CuratorProtected | CuratorExcluded
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Association:
     phenotype_mim: str
     gene_mim: str
@@ -78,26 +78,22 @@ def classify(
 
         for row in rows:
             pair = phenotype_mim, row.gene_mim
-            omim = OmimMorbidmap(row.mapping_key, row.phenotype_label)
+            omim = OmimMorbidmap(mapping_key=row.mapping_key, phenotype_label=row.phenotype_label)
             in_morbidmap.add(pair)
 
             if pair in protections:
                 associations += [
-                    Association(
-                        *pair,
-                        Predicate.GERMLINE_MUTATION,
-                        _protected(protection, omim),
-                    )
+                    _association(pair, Predicate.GERMLINE_MUTATION, _protected(protection, omim))
                     for protection in protections[pair]
                 ]
             elif row.mapping_key is MappingKey.UNKNOWN_DEFECT:
                 continue
             elif exclusion := exclusion_of.get(phenotype_mim):
                 associations.append(
-                    Association(
-                        *pair,
+                    _association(
+                        pair,
                         Predicate.CAUSES_OR_CONTRIBUTES,
-                        CuratorExcluded(exclusion.orcid, exclusion.reason, omim),
+                        CuratorExcluded(orcid=exclusion.orcid, reason=exclusion.reason, omim=omim),
                     )
                 )
             elif row.mapping_key is not MappingKey.MOLECULAR_BASIS_KNOWN:
@@ -106,16 +102,12 @@ def classify(
                     if sole_row
                     else Predicate.CAUSES_OR_CONTRIBUTES
                 )
-                associations.append(Association(*pair, predicate, omim))
+                associations.append(_association(pair, predicate, omim))
             elif sole_row and p2g_is_definitive(row.phenotype_label):
-                associations.append(Association(*pair, Predicate.GERMLINE_MUTATION, omim))
+                associations.append(_association(pair, Predicate.GERMLINE_MUTATION, omim))
 
     associations += [
-        Association(
-            *pair,
-            Predicate.GERMLINE_MUTATION,
-            _protected(protection, omim=None),
-        )
+        _association(pair, Predicate.GERMLINE_MUTATION, _protected(protection, omim=None))
         for pair, pair_protections in protections.items()
         if pair not in in_morbidmap
         for protection in pair_protections
@@ -123,11 +115,20 @@ def classify(
     return associations
 
 
+def _association(
+    pair: tuple[str, str], predicate: Predicate, provenance: Provenance
+) -> Association:
+    phenotype_mim, gene_mim = pair
+    return Association(
+        phenotype_mim=phenotype_mim, gene_mim=gene_mim, predicate=predicate, provenance=provenance
+    )
+
+
 def _protected(protection: ProtectedRow, omim: OmimMorbidmap | None) -> CuratorProtected:
     return CuratorProtected(
-        protection.orcid,
-        protection.protection_type,
-        protection.mondo_id,
-        protection.hgnc_id,
-        omim,
+        orcid=protection.orcid,
+        protection_type=protection.protection_type,
+        mondo_id=protection.mondo_id,
+        hgnc_id=protection.hgnc_id,
+        omim=omim,
     )

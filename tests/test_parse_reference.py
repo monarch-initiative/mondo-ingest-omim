@@ -17,7 +17,13 @@ from omim2obo.parse.reference import (
 
 
 def mapping(subject_id, object_id, justification, **labels) -> Mapping:
-    return Mapping(subject_id, 'skos:exactMatch', object_id, justification, **labels)
+    return Mapping(
+        subject_id=subject_id,
+        predicate_id='skos:exactMatch',
+        object_id=object_id,
+        mapping_justification=justification,
+        **labels,
+    )
 
 
 def test_sssom_metadata_header_is_skipped_and_labels_kept():
@@ -85,7 +91,10 @@ def test_pubmed_refs_are_one_per_publication():
             '900001\tTrue\t2026-01-01\t99000001|99000002\n',
             '900002\tTrue\t2026-01-01\t\n',
         ]
-    ) == [PubmedReference('900001', '99000001'), PubmedReference('900001', '99000002')]
+    ) == [
+        PubmedReference(mim='900001', pmid='99000001'),
+        PubmedReference(mim='900001', pmid='99000002'),
+    ]
 
 
 HGNC_HEADER = 'hgnc_id\tsymbol\tname\tlocus_group\n'
@@ -98,7 +107,10 @@ def test_hgnc_keeps_id_and_symbol():
             'HGNC:99901\tFAKE1\tfake gene 1\tprotein-coding gene\n',
             'HGNC:99902\tFAKE2\t"fake gene 2, with a comma"\tprotein-coding gene\n',
         ]
-    ) == [HgncGene('HGNC:99901', 'FAKE1'), HgncGene('HGNC:99902', 'FAKE2')]
+    ) == [
+        HgncGene(hgnc_id='HGNC:99901', symbol='FAKE1'),
+        HgncGene(hgnc_id='HGNC:99902', symbol='FAKE2'),
+    ]
 
 
 def test_hgnc_gene_without_a_symbol_is_an_error():

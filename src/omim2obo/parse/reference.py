@@ -12,7 +12,7 @@ from typing import TextIO
 from sssom.parsers import parse_sssom_table
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Mapping:
     """A statement that two identifiers, as CURIEs, denote the same thing. Fields are SSSOM's."""
 
@@ -60,7 +60,7 @@ def parse_entry_mappings(lines: Iterable[str]) -> list[Mapping]:
     ]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class PubmedReference:
     """A publication cited by an OMIM entry."""
 
@@ -71,13 +71,13 @@ class PubmedReference:
 def parse_pubmed_refs(lines: Iterable[str]) -> list[PubmedReference]:
     """data/pubmed-refs.tsv: the references OMIM's API gives for each entry, `|`-separated."""
     return [
-        PubmedReference(row['mim'], pmid)
+        PubmedReference(mim=row['mim'], pmid=pmid)
         for row in csv.DictReader(lines, delimiter='\t')
         for pmid in _pipe_separated(row['pmid_refs'])
     ]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class HgncGene:
     hgnc_id: str
     """As a CURIE, e.g. `HGNC:5`."""
@@ -93,7 +93,7 @@ def parse_hgnc(lines: Iterable[str]) -> list[HgncGene]:
             raise ValueError(
                 f'hgnc_complete_set.txt, line {table.line_num}: missing hgnc_id or symbol'
             )
-        genes.append(HgncGene(row['hgnc_id'], row['symbol']))
+        genes.append(HgncGene(hgnc_id=row['hgnc_id'], symbol=row['symbol']))
     return genes
 
 

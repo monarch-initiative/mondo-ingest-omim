@@ -35,24 +35,24 @@ def test_digenic_disease_has_a_row_for_each_gene():
         ]
     ) == [
         ProtectedRow(
-            '900001',
-            '900100',
-            'HGNC:99901',
-            'MONDO:9900001',
-            'WOBBLY KNEE SYNDROME, DIGENIC',
-            'digenic',
-            ORCID,
-            '',
+            phenotype_mim='900001',
+            gene_mim='900100',
+            hgnc_id='HGNC:99901',
+            mondo_id='MONDO:9900001',
+            mondo_label='WOBBLY KNEE SYNDROME, DIGENIC',
+            protection_type='digenic',
+            orcid=ORCID,
+            comment='',
         ),
         ProtectedRow(
-            '900001',
-            '900101',
-            'HGNC:99902',
-            'MONDO:9900001',
-            'WOBBLY KNEE SYNDROME, DIGENIC',
-            'digenic',
-            ORCID,
-            '',
+            phenotype_mim='900001',
+            gene_mim='900101',
+            hgnc_id='HGNC:99902',
+            mondo_id='MONDO:9900001',
+            mondo_label='WOBBLY KNEE SYNDROME, DIGENIC',
+            protection_type='digenic',
+            orcid=ORCID,
+            comment='',
         ),
     ]
 
@@ -92,11 +92,11 @@ def test_exclusion():
         ]
     ) == [
         ExclusionRow(
-            '900001',
-            'MONDO:9900001',
-            'wobbly knee syndrome',
-            ORCID,
-            'caused by a somatic mutation, so not germline',
+            phenotype_mim='900001',
+            mondo_id='MONDO:9900001',
+            mondo_label='wobbly knee syndrome',
+            orcid=ORCID,
+            reason='caused by a somatic mutation, so not germline',
         ),
     ]
 

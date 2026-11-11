@@ -63,7 +63,7 @@ def test_every_prefix_of_a_live_entry(prefix):
 def test_removed_entry_says_where_it_went(preferred, moved_to):
     """Each shape here occurs in the real file."""
     assert parse_mim_titles([titles('Caret', '900001', preferred)]) == [
-        RemovedRow('900001', moved_to)
+        RemovedRow(mim='900001', moved_to=moved_to)
     ]
 
 
@@ -85,8 +85,20 @@ def test_mim2gene_absent_identifiers_are_none():
             '900001\tphenotype\t\t\t\n',
         ]
     ) == [
-        Mim2GeneRow('900100', Mim2GeneEntryType.GENE, '99901', 'FAKE1', 'ENSG00000999001'),
-        Mim2GeneRow('900001', Mim2GeneEntryType.PHENOTYPE, None, None, None),
+        Mim2GeneRow(
+            mim='900100',
+            entry_type=Mim2GeneEntryType.GENE,
+            entrez_id='99901',
+            hgnc_symbol='FAKE1',
+            ensembl_id='ENSG00000999001',
+        ),
+        Mim2GeneRow(
+            mim='900001',
+            entry_type=Mim2GeneEntryType.PHENOTYPE,
+            entrez_id=None,
+            hgnc_symbol=None,
+            ensembl_id=None,
+        ),
     ]
 
 
@@ -115,8 +127,8 @@ def test_genemap2_keeps_mim_and_approved_symbol():
         )
 
     assert parse_genemap2([line('900100', 'FAKE1'), line('900101', '')]) == [
-        Genemap2Row('900100', 'FAKE1'),
-        Genemap2Row('900101', None),
+        Genemap2Row(mim='900100', approved_symbol='FAKE1'),
+        Genemap2Row(mim='900101', approved_symbol=None),
     ]
 
 
@@ -131,6 +143,8 @@ def test_phenotypic_series_gathers_its_members():
             'PS900010\t900010\tKnee wobble, isolated, 1\n',
         ]
     ) == [
-        PhenotypicSeries('PS900001', 'Wobbly knee syndrome', ('900001', '900002')),
-        PhenotypicSeries('PS900010', 'Knee wobble, isolated', ('900010',)),
+        PhenotypicSeries(
+            number='PS900001', title='Wobbly knee syndrome', members=('900001', '900002')
+        ),
+        PhenotypicSeries(number='PS900010', title='Knee wobble, isolated', members=('900010',)),
     ]

@@ -25,7 +25,7 @@ UNEXPECTED_PHENOTYPE_TYPES = {
 }
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class ReviewCase:
     code: int
     value: str
@@ -65,23 +65,23 @@ def review_cases(
         )
 
         if 'digenic' in label.lower():
-            cases.append(ReviewCase(1, info))
+            cases.append(ReviewCase(code=1, value=info))
         if 'somatic' in label.lower():
-            cases.append(ReviewCase(3, info))
+            cases.append(ReviewCase(code=3, value=info))
         if rows := self_references.get(phenotype_mim):
             self_referential += 1
-            cases.append(ReviewCase(2, f'{self_referential}: {info}'))
+            cases.append(ReviewCase(code=2, value=f'{self_referential}: {info}'))
             cases += [
                 ReviewCase(
-                    2,
-                    f'{self_referential}: (Phenotype: {row.phenotype_label}), '
+                    code=2,
+                    value=f'{self_referential}: (Phenotype: {row.phenotype_label}), '
                     f'(Map key: {row.mapping_key.value}), (Gene: {phenotype_mim})',
                 )
                 for row in rows
             ]
         if phenotype_mim in prefix_of and prefix_of[phenotype_mim] in UNEXPECTED_PHENOTYPE_TYPES:
             code, type_name = UNEXPECTED_PHENOTYPE_TYPES[prefix_of[phenotype_mim]]
-            cases.append(ReviewCase(code, f'(Phenotype MIM type {type_name}), {info}'))
+            cases.append(ReviewCase(code=code, value=f'(Phenotype MIM type {type_name}), {info}'))
     return sorted(cases, key=lambda case: (case.code, case.value))
 
 

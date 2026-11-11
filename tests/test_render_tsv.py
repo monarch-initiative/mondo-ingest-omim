@@ -6,21 +6,56 @@ from omim2obo.project import MondoGeneRow
 from omim2obo.render.tsv import render_mondo_genes, render_qc, render_susceptibility
 from omim2obo.titles import EntryTitles, TitleGroup
 
-NONE = TitleGroup((), (), (), ())
-KNEE = EntryTitles('900001', EntryPrefix.PHENOTYPE, 'wobbly "knee" syndrome', ('WKS',), NONE, NONE)
-TRAIT = EntryTitles('900002', EntryPrefix.OTHER, 'knee wobbliness', (), NONE, NONE)
-WBK1 = EntryTitles('900100', EntryPrefix.GENE, 'wobbly knee gene 1', ('WBK1',), NONE, NONE)
+NONE = TitleGroup(titles=(), symbols=(), former_titles=(), former_symbols=())
+KNEE = EntryTitles(
+    mim='900001',
+    prefix=EntryPrefix.PHENOTYPE,
+    preferred_title='wobbly "knee" syndrome',
+    preferred_symbols=('WKS',),
+    alternative=NONE,
+    included=NONE,
+)
+TRAIT = EntryTitles(
+    mim='900002',
+    prefix=EntryPrefix.OTHER,
+    preferred_title='knee wobbliness',
+    preferred_symbols=(),
+    alternative=NONE,
+    included=NONE,
+)
+WBK1 = EntryTitles(
+    mim='900100',
+    prefix=EntryPrefix.GENE,
+    preferred_title='wobbly knee gene 1',
+    preferred_symbols=('WBK1',),
+    alternative=NONE,
+    included=NONE,
+)
 
 
 def association(phenotype, predicate) -> Association:
-    provenance = OmimMorbidmap(MappingKey.MOLECULAR_BASIS_KNOWN, 'Wobbly knee syndrome')
-    return Association(phenotype, '900100', predicate, provenance)
+    provenance = OmimMorbidmap(
+        mapping_key=MappingKey.MOLECULAR_BASIS_KNOWN, phenotype_label='Wobbly knee syndrome'
+    )
+    return Association(
+        phenotype_mim=phenotype, gene_mim='900100', predicate=predicate, provenance=provenance
+    )
 
 
 def test_mondo_genes_template():
     rows = [
-        MondoGeneRow('MONDO:9900002', 'HGNC:99901', '900001', '900100'),
-        MondoGeneRow('MONDO:9900001', 'HGNC:99901', '900001', '900100'),
+        MondoGeneRow(
+            mondo_id='MONDO:9900002',
+            hgnc_id='HGNC:99901',
+            phenotype_mim='900001',
+            gene_mim='900100',
+        ),
+        MondoGeneRow(
+            mondo_id='MONDO:9900001',
+            hgnc_id='HGNC:99901',
+            phenotype_mim='900001',
+            gene_mim='900100',
+        ),
     ]
     assert render_mondo_genes(rows) == (
         'mondo_id\thgnc_id\tomim_disease_xref\tomim_gene\n'

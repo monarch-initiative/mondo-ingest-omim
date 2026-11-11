@@ -7,7 +7,7 @@ from omim2obo.parse.omim import EntryPrefix, TitleRow
 from omim2obo.romanplus import fromRoman, romanNumeralPattern, toRoman
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class TitleGroup:
     """One of an entry's title fields, split and cleaned."""
 
@@ -17,7 +17,7 @@ class TitleGroup:
     former_symbols: tuple[str, ...]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class EntryTitles:
     mim: str
     prefix: EntryPrefix
@@ -46,10 +46,10 @@ def entry_titles(row: TitleRow, capitalizations: dict[str, str]) -> EntryTitles:
 
     def group(titles, symbols_, former_titles, former_symbols) -> TitleGroup:
         return TitleGroup(
-            tuple(recapitalize_acronyms_in_titles(titles, symbols)),
-            tuple(symbols_),
-            tuple(recapitalize_acronyms_in_titles(former_titles, symbols)),
-            tuple(former_symbols),
+            titles=tuple(recapitalize_acronyms_in_titles(titles, symbols)),
+            symbols=tuple(symbols_),
+            former_titles=tuple(recapitalize_acronyms_in_titles(former_titles, symbols)),
+            former_symbols=tuple(former_symbols),
         )
 
     return EntryTitles(

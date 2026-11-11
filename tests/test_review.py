@@ -7,16 +7,30 @@ from omim2obo.review import ReviewCase, review_cases
 from omim2obo.titles import EntryTitles, TitleGroup
 
 KEY_3 = MappingKey.MOLECULAR_BASIS_KNOWN
-NONE = TitleGroup((), (), (), ())
+NONE = TitleGroup(titles=(), symbols=(), former_titles=(), former_symbols=())
 
 
 def row(label, phenotype='900001', gene='900100', key=KEY_3) -> MorbidmapRow:
-    return MorbidmapRow(label, phenotype, key, (), gene, '1p36')
+    return MorbidmapRow(
+        phenotype_label=label,
+        phenotype_mim=phenotype,
+        mapping_key=key,
+        gene_symbols=(),
+        gene_mim=gene,
+        cyto_location='1p36',
+    )
 
 
 def germline(row_: MorbidmapRow, provenance=None) -> Association:
-    provenance = provenance or OmimMorbidmap(row_.mapping_key, row_.phenotype_label)
-    return Association(row_.phenotype_mim, row_.gene_mim, Predicate.GERMLINE_MUTATION, provenance)
+    provenance = provenance or OmimMorbidmap(
+        mapping_key=row_.mapping_key, phenotype_label=row_.phenotype_label
+    )
+    return Association(
+        phenotype_mim=row_.phenotype_mim,
+        gene_mim=row_.gene_mim,
+        predicate=Predicate.GERMLINE_MUTATION,
+        provenance=provenance,
+    )
 
 
 def review(*rows, entries=(), removed=(), associations=None) -> list[ReviewCase]:
@@ -32,8 +46,8 @@ def test_unremarkable_association_is_not_reviewed():
 def test_digenic_and_somatic_labels():
     info = '(Phenotype: 900001 Wobbly knee, digenic, somatic, ), (Map key: 3), (Gene: 900100)'
     assert review(row('Wobbly knee, digenic, somatic')) == [
-        ReviewCase(1, info),
-        ReviewCase(3, info),
+        ReviewCase(code=1, value=info),
+        ReviewCase(code=3, value=info),
     ]
 
 
@@ -55,20 +69,33 @@ def test_self_referential_cases_are_numbered():
 
 
 def test_phenotype_of_the_wrong_entry_type():
-    gene = EntryTitles('900001', EntryPrefix.GENE, 'wobbly knee gene', (), NONE, NONE)
+    gene = EntryTitles(
+        mim='900001',
+        prefix=EntryPrefix.GENE,
+        preferred_title='wobbly knee gene',
+        preferred_symbols=(),
+        alternative=NONE,
+        included=NONE,
+    )
     [case] = review(row('Wobbly knee'), entries=[gene])
     assert (case.code, case.value.split(',')[0]) == (4, '(Phenotype MIM type GENE)')
-    [case] = review(row('Wobbly knee'), removed=[RemovedRow('900001', ())])
+    [case] = review(row('Wobbly knee'), removed=[RemovedRow(mim='900001', moved_to=())])
     assert (case.code, case.value.split(',')[0]) == (5, '(Phenotype MIM type OBSOLETE)')
 
 
 def test_curated_association_is_not_reviewed():
     somatic = row('Wobbly knee, somatic')
-    protected = CuratorProtected(None, 'manually reviewed', 'MONDO:9900001', 'HGNC:99901', None)
+    protected = CuratorProtected(
+        orcid=None,
+        protection_type='manually reviewed',
+        mondo_id='MONDO:9900001',
+        hgnc_id='HGNC:99901',
+        omim=None,
+    )
     assert review(somatic, associations=[germline(somatic, protected)]) == []
 
 
 def test_render():
-    assert render_review([ReviewCase(3, 'a "quoted" value')]) == (
+    assert render_review([ReviewCase(code=3, value='a "quoted" value')]) == (
         'classCode\tclassShortName\tvalue\n3\tD2G: somatic\t"a ""quoted"" value"\n'
     )

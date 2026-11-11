@@ -10,7 +10,7 @@ from omim2obo.parse.reference import Mapping
 from omim2obo.predicates import Predicate
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class MondoGeneRow:
     """A Mondo class has its material basis in germline mutation in an HGNC gene."""
 
@@ -40,9 +40,18 @@ def project(
         # A curator pairs one class with one gene. That is as well as, not instead of, whatever
         # the entry and its gene are mapped to.
         if isinstance(provenance, CuratorProtected):
-            rows.add(MondoGeneRow(provenance.mondo_id, provenance.hgnc_id, phenotype_mim, gene_mim))
+            rows.add(
+                MondoGeneRow(
+                    mondo_id=provenance.mondo_id,
+                    hgnc_id=provenance.hgnc_id,
+                    phenotype_mim=phenotype_mim,
+                    gene_mim=gene_mim,
+                )
+            )
         rows |= {
-            MondoGeneRow(mondo_id, hgnc_id, phenotype_mim, gene_mim)
+            MondoGeneRow(
+                mondo_id=mondo_id, hgnc_id=hgnc_id, phenotype_mim=phenotype_mim, gene_mim=gene_mim
+            )
             for mondo_id in mondo_ids[phenotype_mim]
             for hgnc_id in hgnc_ids[gene_mim]
         }
@@ -66,7 +75,12 @@ def susceptibility_subset(
 def _flipped(mappings: Iterable[Mapping]) -> list[Mapping]:
     """Mondo publishes its mappings with the Mondo class as subject."""
     return [
-        Mapping(m.object_id, m.predicate_id, m.subject_id, m.mapping_justification)
+        Mapping(
+            subject_id=m.object_id,
+            predicate_id=m.predicate_id,
+            object_id=m.subject_id,
+            mapping_justification=m.mapping_justification,
+        )
         for m in mappings
     ]
 

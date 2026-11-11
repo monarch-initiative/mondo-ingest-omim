@@ -22,7 +22,12 @@ def hgnc_mappings(symbols: dict[str, str], hgnc: Iterable[HgncGene]) -> list[Map
     """OMIM names a gene by symbol only; HGNC's own table turns that into an identifier."""
     id_of = {gene.symbol: gene.hgnc_id for gene in hgnc}
     return [
-        Mapping(f'OMIM:{mim}', 'skos:exactMatch', id_of[symbol], 'semapv:UnspecifiedMatching')
+        Mapping(
+            subject_id=f'OMIM:{mim}',
+            predicate_id='skos:exactMatch',
+            object_id=id_of[symbol],
+            mapping_justification='semapv:UnspecifiedMatching',
+        )
         for mim, symbol in symbols.items()
         if symbol in id_of
     ]

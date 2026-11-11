@@ -26,8 +26,10 @@ from omim2obo.titles import EntryTitles, TitleGroup
 KNEE, WBK1, WBK2 = omim('900001'), omim('900100'), omim('900101')
 ORCID = 'https://orcid.org/0000-0000-0000-0001'
 OTHER_ORCID = 'https://orcid.org/0000-0000-0000-0002'
-KEY_2 = OmimMorbidmap(MappingKey.LINKAGE, 'Wobbly knee syndrome')
-KEY_3 = OmimMorbidmap(MappingKey.MOLECULAR_BASIS_KNOWN, 'Wobbly knee syndrome')
+KEY_2 = OmimMorbidmap(mapping_key=MappingKey.LINKAGE, phenotype_label='Wobbly knee syndrome')
+KEY_3 = OmimMorbidmap(
+    mapping_key=MappingKey.MOLECULAR_BASIS_KNOWN, phenotype_label='Wobbly knee syndrome'
+)
 
 
 def render(**inputs) -> Graph:
@@ -55,11 +57,19 @@ def restrictions(graph: Graph) -> set[tuple]:
 
 
 def association(provenance, predicate=Predicate.GERMLINE_MUTATION, gene='900100') -> Association:
-    return Association('900001', gene, predicate, provenance)
+    return Association(
+        phenotype_mim='900001', gene_mim=gene, predicate=predicate, provenance=provenance
+    )
 
 
 def protected(orcid=ORCID, omim=KEY_3) -> CuratorProtected:
-    return CuratorProtected(orcid, 'manually reviewed', 'MONDO:9900001', 'HGNC:99901', omim)
+    return CuratorProtected(
+        orcid=orcid,
+        protection_type='manually reviewed',
+        mondo_id='MONDO:9900001',
+        hgnc_id='HGNC:99901',
+        omim=omim,
+    )
 
 
 def test_version():
@@ -71,11 +81,25 @@ def test_version():
 
 
 def test_gene_is_labelled_by_symbol_and_phenotype_by_title():
-    none = TitleGroup((), (), (), ())
+    none = TitleGroup(titles=(), symbols=(), former_titles=(), former_symbols=())
     graph = render(
         entries=[
-            EntryTitles('900100', EntryPrefix.GENE, 'wobbly knee gene 1', ('WBK1',), none, none),
-            EntryTitles('900001', EntryPrefix.PHENOTYPE, 'wobbly knee', ('WKS',), none, none),
+            EntryTitles(
+                mim='900100',
+                prefix=EntryPrefix.GENE,
+                preferred_title='wobbly knee gene 1',
+                preferred_symbols=('WBK1',),
+                alternative=none,
+                included=none,
+            ),
+            EntryTitles(
+                mim='900001',
+                prefix=EntryPrefix.PHENOTYPE,
+                preferred_title='wobbly knee',
+                preferred_symbols=('WKS',),
+                alternative=none,
+                included=none,
+            ),
         ]
     )
     assert graph.value(WBK1, RDFS.label) == Literal('WBK1')
@@ -87,8 +111,8 @@ def test_gene_is_labelled_by_symbol_and_phenotype_by_title():
 def test_removed_entry_points_to_its_replacements():
     graph = render(
         removed=[
-            RemovedRow('900001', ('900002',)),
-            RemovedRow('900003', ('900004', '900005')),
+            RemovedRow(mim='900001', moved_to=('900002',)),
+            RemovedRow(mim='900003', moved_to=('900004', '900005')),
         ]
     )
     assert graph.value(KNEE, OWL.deprecated) == Literal(True)
@@ -101,7 +125,7 @@ def test_removed_entry_points_to_its_replacements():
 
 
 def test_QUIRK_entry_removed_without_replacement_is_labelled():
-    graph = render(removed=[RemovedRow('900001', ())])
+    graph = render(removed=[RemovedRow(mim='900001', moved_to=())])
     assert graph.value(KNEE, RDFS.label) == Literal('removed from database')
 
 
@@ -118,7 +142,7 @@ def test_other_predicates_are_stated_from_the_gene():
 
 
 def test_exclusion_names_its_curator():
-    excluded = CuratorExcluded(ORCID, 'somatic', KEY_3)
+    excluded = CuratorExcluded(orcid=ORCID, reason='somatic', omim=KEY_3)
     graph = render(associations=[association(excluded, Predicate.CAUSES_OR_CONTRIBUTES)])
     assert restrictions(graph) == {(WBK1, iri('RO:0003302'), KNEE, 'Evidence: (3)', URIRef(ORCID))}
 
@@ -148,7 +172,12 @@ def test_basis_in_an_omim_gene_is_also_stated_of_its_hgnc_gene():
     graph = render(
         associations=[association(KEY_3)],
         hgnc_mappings=[
-            Mapping('OMIM:900100', 'skos:exactMatch', 'HGNC:99901', 'semapv:UnspecifiedMatching')
+            Mapping(
+                subject_id='OMIM:900100',
+                predicate_id='skos:exactMatch',
+                object_id='HGNC:99901',
+                mapping_justification='semapv:UnspecifiedMatching',
+            )
         ],
     )
     assert (KNEE, iri('RO:0004003'), iri('HGNC:99901'), None, None) in restrictions(graph)
@@ -156,7 +185,11 @@ def test_basis_in_an_omim_gene_is_also_stated_of_its_hgnc_gene():
 
 def test_mondo_mapping_is_stated_both_ways_round():
     mapping = Mapping(
-        'MONDO:9900001', 'skos:exactMatch', 'OMIM:900001', 'semapv:ManualMappingCuration', 'wks'
+        subject_id='MONDO:9900001',
+        predicate_id='skos:exactMatch',
+        object_id='OMIM:900001',
+        mapping_justification='semapv:ManualMappingCuration',
+        subject_label='wks',
     )
     graph = render(mondo_mappings=[mapping])
     mondo = iri('MONDO:9900001')
@@ -169,7 +202,14 @@ def test_mondo_mapping_is_stated_both_ways_round():
 
 def test_gene_location_comes_from_its_first_morbidmap_row():
     def row(location):
-        return MorbidmapRow('Wobbly knee', '900001', MappingKey.LINKAGE, (), '900100', location)
+        return MorbidmapRow(
+            phenotype_label='Wobbly knee',
+            phenotype_mim='900001',
+            mapping_key=MappingKey.LINKAGE,
+            gene_symbols=(),
+            gene_mim='900100',
+            cyto_location=location,
+        )
 
     graph = render(morbidmap=[row('1p36'), row('2q11')])
     assert {filler for _, _, filler, _, _ in restrictions(graph)} == {iri('CHR:9606chr1p36')}

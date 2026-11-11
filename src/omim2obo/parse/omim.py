@@ -29,7 +29,7 @@ class MappingKey(Enum):
     CONTIGUOUS_GENE_SYNDROME = 4
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class MorbidmapRow:
     """One line of morbidmap.txt: a phenotype, and a gene or locus it has been mapped to."""
 
@@ -75,7 +75,7 @@ def parse_morbidmap(lines: Iterable[str]) -> list[MorbidmapRow]:
     return rows
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class TitleRow:
     """One line of mimTitles.txt, for an entry that exists.
 
@@ -92,7 +92,7 @@ class TitleRow:
     entry' on omim.org."""
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class RemovedRow:
     """One line of mimTitles.txt, for an entry that no longer exists: prefix `Caret`."""
 
@@ -111,9 +111,17 @@ def parse_mim_titles(lines: Iterable[str]) -> list[TitleRow | RemovedRow]:
                 raise ValueError(
                     f'mimTitles.txt: cannot read what became of removed entry in {line!r}'
                 )
-            rows.append(RemovedRow(mim, tuple(re.findall(r'\d{6}', preferred))))
+            rows.append(RemovedRow(mim=mim, moved_to=tuple(re.findall(r'\d{6}', preferred))))
         else:
-            rows.append(TitleRow(EntryPrefix(prefix), mim, preferred, alternative, included))
+            rows.append(
+                TitleRow(
+                    prefix=EntryPrefix(prefix),
+                    mim=mim,
+                    preferred=preferred,
+                    alternative=alternative,
+                    included=included,
+                )
+            )
     return rows
 
 
@@ -125,7 +133,7 @@ class Mim2GeneEntryType(Enum):
     MOVED_REMOVED = 'moved/removed'
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Mim2GeneRow:
     """One line of mim2gene.txt: an entry's identifiers in other gene databases."""
 
@@ -142,17 +150,17 @@ def parse_mim2gene(lines: Iterable[str]) -> list[Mim2GeneRow]:
         mim, entry_type, entrez_id, hgnc_symbol, ensembl_id = line.split('\t')
         rows.append(
             Mim2GeneRow(
-                mim,
-                Mim2GeneEntryType(entry_type),
-                entrez_id or None,
-                hgnc_symbol or None,
-                ensembl_id or None,
+                mim=mim,
+                entry_type=Mim2GeneEntryType(entry_type),
+                entrez_id=entrez_id or None,
+                hgnc_symbol=hgnc_symbol or None,
+                ensembl_id=ensembl_id or None,
             )
         )
     return rows
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Genemap2Row:
     """One line of genemap2.txt, reduced to the two of its fourteen columns the pipeline reads."""
 
@@ -168,7 +176,7 @@ def parse_genemap2(lines: Iterable[str]) -> list[Genemap2Row]:
     return rows
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class PhenotypicSeries:
     """A group of entries for clinically similar phenotypes, from phenotypicSeries.txt."""
 
@@ -197,5 +205,6 @@ def parse_phenotypic_series(lines: Iterable[str]) -> list[PhenotypicSeries]:
             case _:
                 raise ValueError(f'phenotypicSeries.txt: expected two or three fields in {line!r}')
     return [
-        PhenotypicSeries(number, title, tuple(members[number])) for number, title in titles.items()
+        PhenotypicSeries(number=number, title=title, members=tuple(members[number]))
+        for number, title in titles.items()
     ]

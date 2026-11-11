@@ -18,19 +18,39 @@ ORCID = 'https://orcid.org/0000-0000-0000-0001'
 
 
 def row(phenotype='900001', gene='900100', key=KEY_3, label='Wobbly knee syndrome') -> MorbidmapRow:
-    return MorbidmapRow(label, phenotype, key, ('FAKE',), gene, '1p36')
+    return MorbidmapRow(
+        phenotype_label=label,
+        phenotype_mim=phenotype,
+        mapping_key=key,
+        gene_symbols=('FAKE',),
+        gene_mim=gene,
+        cyto_location='1p36',
+    )
 
 
 def protect(
     phenotype='900001', gene='900100', mondo='MONDO:9900001', type_='manually reviewed'
 ) -> ProtectedRow:
     return ProtectedRow(
-        phenotype, gene, 'HGNC:99901', mondo, 'wobbly knee syndrome', type_, ORCID, ''
+        phenotype_mim=phenotype,
+        gene_mim=gene,
+        hgnc_id='HGNC:99901',
+        mondo_id=mondo,
+        mondo_label='wobbly knee syndrome',
+        protection_type=type_,
+        orcid=ORCID,
+        comment='',
     )
 
 
 def exclude(phenotype='900001') -> ExclusionRow:
-    return ExclusionRow(phenotype, 'MONDO:9900001', 'wobbly knee syndrome', ORCID, 'somatic')
+    return ExclusionRow(
+        phenotype_mim=phenotype,
+        mondo_id='MONDO:9900001',
+        mondo_label='wobbly knee syndrome',
+        orcid=ORCID,
+        reason='somatic',
+    )
 
 
 def predicates(associations) -> list[tuple[str, Predicate]]:
@@ -41,10 +61,10 @@ def test_one_gene_with_known_molecular_basis_defines_the_disease():
     """The overwhelmingly common case."""
     assert classify([row()], [], []) == [
         Association(
-            '900001',
-            '900100',
-            Predicate.GERMLINE_MUTATION,
-            OmimMorbidmap(KEY_3, 'Wobbly knee syndrome'),
+            phenotype_mim='900001',
+            gene_mim='900100',
+            predicate=Predicate.GERMLINE_MUTATION,
+            provenance=OmimMorbidmap(mapping_key=KEY_3, phenotype_label='Wobbly knee syndrome'),
         )
     ]
 
@@ -107,10 +127,12 @@ def test_same_gene_under_two_mapping_keys():
     )
     assert associations == [
         Association(
-            '900001',
-            '900100',
-            Predicate.CAUSES_OR_CONTRIBUTES,
-            OmimMorbidmap(KEY_4, 'Chromosome 99q deletion syndrome'),
+            phenotype_mim='900001',
+            gene_mim='900100',
+            predicate=Predicate.CAUSES_OR_CONTRIBUTES,
+            provenance=OmimMorbidmap(
+                mapping_key=KEY_4, phenotype_label='Chromosome 99q deletion syndrome'
+            ),
         )
     ]
 
@@ -134,10 +156,14 @@ def test_exclusion_weakens_every_association_of_the_phenotype():
     """Modelled on OMIM:130060 (Ehlers-Danlos syndrome, arthrochalasia type)."""
     assert classify([row()], [], [exclude()]) == [
         Association(
-            '900001',
-            '900100',
-            Predicate.CAUSES_OR_CONTRIBUTES,
-            CuratorExcluded(ORCID, 'somatic', OmimMorbidmap(KEY_3, 'Wobbly knee syndrome')),
+            phenotype_mim='900001',
+            gene_mim='900100',
+            predicate=Predicate.CAUSES_OR_CONTRIBUTES,
+            provenance=CuratorExcluded(
+                orcid=ORCID,
+                reason='somatic',
+                omim=OmimMorbidmap(mapping_key=KEY_3, phenotype_label='Wobbly knee syndrome'),
+            ),
         )
     ]
 
@@ -182,11 +208,11 @@ def test_included_terms_each_keep_their_own_mondo_class():
 def test_protection_carries_the_morbidmap_row_it_coincides_with():
     [association] = classify([row(key=KEY_2)], [protect()], [])
     assert association.provenance == CuratorProtected(
-        ORCID,
-        'manually reviewed',
-        'MONDO:9900001',
-        'HGNC:99901',
-        OmimMorbidmap(KEY_2, 'Wobbly knee syndrome'),
+        orcid=ORCID,
+        protection_type='manually reviewed',
+        mondo_id='MONDO:9900001',
+        hgnc_id='HGNC:99901',
+        omim=OmimMorbidmap(mapping_key=KEY_2, phenotype_label='Wobbly knee syndrome'),
     )
 
 
@@ -195,15 +221,15 @@ def test_protection_names_a_mondo_class_for_a_gene_omim_already_lists():
     protected row adds is the Mondo class for the entry's included title."""
     assert classify([row()], [protect(mondo='MONDO:9900002', type_='included entry')], []) == [
         Association(
-            '900001',
-            '900100',
-            Predicate.GERMLINE_MUTATION,
-            CuratorProtected(
-                ORCID,
-                'included entry',
-                'MONDO:9900002',
-                'HGNC:99901',
-                OmimMorbidmap(KEY_3, 'Wobbly knee syndrome'),
+            phenotype_mim='900001',
+            gene_mim='900100',
+            predicate=Predicate.GERMLINE_MUTATION,
+            provenance=CuratorProtected(
+                orcid=ORCID,
+                protection_type='included entry',
+                mondo_id='MONDO:9900002',
+                hgnc_id='HGNC:99901',
+                omim=OmimMorbidmap(mapping_key=KEY_3, phenotype_label='Wobbly knee syndrome'),
             ),
         )
     ]
@@ -213,16 +239,22 @@ def test_protection_of_a_gene_morbidmap_does_not_list_for_the_phenotype():
     associations = classify([row(gene='900100')], [protect(gene='900101')], [])
     assert associations == [
         Association(
-            '900001',
-            '900100',
-            Predicate.GERMLINE_MUTATION,
-            OmimMorbidmap(KEY_3, 'Wobbly knee syndrome'),
+            phenotype_mim='900001',
+            gene_mim='900100',
+            predicate=Predicate.GERMLINE_MUTATION,
+            provenance=OmimMorbidmap(mapping_key=KEY_3, phenotype_label='Wobbly knee syndrome'),
         ),
         Association(
-            '900001',
-            '900101',
-            Predicate.GERMLINE_MUTATION,
-            CuratorProtected(ORCID, 'manually reviewed', 'MONDO:9900001', 'HGNC:99901', omim=None),
+            phenotype_mim='900001',
+            gene_mim='900101',
+            predicate=Predicate.GERMLINE_MUTATION,
+            provenance=CuratorProtected(
+                orcid=ORCID,
+                protection_type='manually reviewed',
+                mondo_id='MONDO:9900001',
+                hgnc_id='HGNC:99901',
+                omim=None,
+            ),
         ),
     ]
 
