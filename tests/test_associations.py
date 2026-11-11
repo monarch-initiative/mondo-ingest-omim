@@ -182,7 +182,11 @@ def test_included_terms_each_keep_their_own_mondo_class():
 def test_protection_carries_the_morbidmap_row_it_coincides_with():
     [association] = classify([row(key=KEY_2)], [protect()], [])
     assert association.provenance == CuratorProtected(
-        ORCID, 'manually reviewed', 'MONDO:9900001', OmimMorbidmap(KEY_2, 'Wobbly knee syndrome')
+        ORCID,
+        'manually reviewed',
+        'MONDO:9900001',
+        'HGNC:99901',
+        OmimMorbidmap(KEY_2, 'Wobbly knee syndrome'),
     )
 
 
@@ -198,6 +202,7 @@ def test_protection_names_a_mondo_class_for_a_gene_omim_already_lists():
                 ORCID,
                 'included entry',
                 'MONDO:9900002',
+                'HGNC:99901',
                 OmimMorbidmap(KEY_3, 'Wobbly knee syndrome'),
             ),
         )
@@ -217,7 +222,7 @@ def test_protection_of_a_gene_morbidmap_does_not_list_for_the_phenotype():
             '900001',
             '900101',
             Predicate.GERMLINE_MUTATION,
-            CuratorProtected(ORCID, 'manually reviewed', 'MONDO:9900001', omim=None),
+            CuratorProtected(ORCID, 'manually reviewed', 'MONDO:9900001', 'HGNC:99901', omim=None),
         ),
     ]
 

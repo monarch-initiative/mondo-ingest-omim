@@ -28,6 +28,7 @@ class CuratorProtected:
     orcid: str | None
     protection_type: str
     mondo_id: str
+    hgnc_id: str
     omim: OmimMorbidmap | None
     """The morbidmap row for the same phenotype and gene, if OMIM has one."""
 
@@ -85,9 +86,7 @@ def classify(
                     Association(
                         *pair,
                         Predicate.GERMLINE_MUTATION,
-                        CuratorProtected(
-                            protection.orcid, protection.protection_type, protection.mondo_id, omim
-                        ),
+                        _protected(protection, omim),
                     )
                     for protection in protections[pair]
                 ]
@@ -115,12 +114,20 @@ def classify(
         Association(
             *pair,
             Predicate.GERMLINE_MUTATION,
-            CuratorProtected(
-                protection.orcid, protection.protection_type, protection.mondo_id, omim=None
-            ),
+            _protected(protection, omim=None),
         )
         for pair, pair_protections in protections.items()
         if pair not in in_morbidmap
         for protection in pair_protections
     ]
     return associations
+
+
+def _protected(protection: ProtectedRow, omim: OmimMorbidmap | None) -> CuratorProtected:
+    return CuratorProtected(
+        protection.orcid,
+        protection.protection_type,
+        protection.mondo_id,
+        protection.hgnc_id,
+        omim,
+    )
