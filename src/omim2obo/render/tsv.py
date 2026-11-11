@@ -7,6 +7,7 @@ from collections.abc import Iterable
 from omim2obo.associations import Association
 from omim2obo.entry_prefix import BIOLINK_CATEGORY
 from omim2obo.predicates import Predicate
+from omim2obo.prefixes import expand
 from omim2obo.project import MondoGeneRow
 from omim2obo.titles import EntryTitles
 
@@ -16,11 +17,13 @@ CAUSAL_GERMLINE_MUTATION_IN = 'RO:0004013'
 
 def render_mondo_genes(rows: Iterable[MondoGeneRow]) -> str:
     """mondo-omim-genes.robot.tsv, a ROBOT template."""
+    # Sorted on the gene before the phenotype, though the columns are the other way round: the
+    # order the legacy build gave its rows, kept so that a release diffs cleanly against the last.
     lines = sorted(
         (
-            row.mondo_id.replace('MONDO:', 'http://purl.obolibrary.org/obo/MONDO_'),
-            row.hgnc_id.replace('HGNC:', 'http://identifiers.org/hgnc/'),
-            f'https://omim.org/entry/{row.gene_mim}',
+            expand(row.mondo_id),
+            expand(row.hgnc_id),
+            expand(f'OMIM:{row.gene_mim}'),
             f'OMIM:{row.phenotype_mim}',
         )
         for row in rows
@@ -42,6 +45,7 @@ def render_mondo_genes(rows: Iterable[MondoGeneRow]) -> str:
 
 def render_susceptibility(subset: Iterable[tuple[str, str]]) -> str:
     """mondo-omim-susceptibility-subset.robot.tsv, a ROBOT template."""
+    # QUIRK: this file alone has always been written with CRLF line endings.
     return _tsv(
         [
             ('mondo_id', 'subset', 'omim_id'),
@@ -77,6 +81,8 @@ def render_qc(associations: Iterable[Association], entries: Iterable[EntryTitles
     def category(entry: EntryTitles) -> str:
         return BIOLINK_CATEGORY.get(entry.prefix, '')
 
+    # The sort key is not the column order: it is the ORDER BY of the SPARQL query that used to
+    # write this file (direction, subject category, predicate, subject, object category, object).
     rows = sorted(
         (direction, category(subject), predicate, subject.mim, category(object_), object_.mim)
         + (subject.label, object_.label)
