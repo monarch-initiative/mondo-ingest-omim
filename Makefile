@@ -1,6 +1,6 @@
 export PYTHONPATH := src
 
-.PHONY: all fetch help install test lint cleanup golden
+.PHONY: all fetch help install test lint clean golden
 
 TSVS = mondo-omim-genes.robot.tsv disease-gene-relationships-qc.tsv \
 	mondo-omim-susceptibility-subset.robot.tsv review.tsv
@@ -50,7 +50,6 @@ data/hgnc/hgnc_complete_set.txt:
 
 omim.sssom.tsv: omim.json
 	sssom parse omim.json -I obographs-json -m data/metadata.sssom.yml -o omim.sssom.tsv
-	make cleanup
 
 mondo_exactmatch_omim.sssom.tsv:
 	wget "http://purl.obolibrary.org/obo/mondo/mappings/mondo_exactmatch_omim.sssom.tsv" -O $@
@@ -60,6 +59,8 @@ mondo_exactmatch_omimps.sssom.tsv:
 
 # More commands / goals  -----------------------------------------------------------------------------------------------
 # Create mapping artefact(s)
+# Only a step on the way to omim.sssom.tsv; make removes it afterwards
+.INTERMEDIATE: omim.json
 omim.json: omim.owl
 	robot convert -i $< -o omim.json
 
@@ -67,8 +68,9 @@ omim.json: omim.owl
 omim.owl: omim.nt
 	robot convert -i $< -f ofn -o $@
 
-cleanup:
-	@rm -f omim.json
+# clean: Remove everything the build writes. Downloaded inputs are left alone
+clean:
+	rm -f omim.nt omim.owl omim.json omim.sssom.tsv $(TSVS)
 
 # SETUP / INSTALLATION -------------------------------------------------------------------------------------------------
 # The ODK container already has everything the build imports. This is for working outside it.
@@ -105,6 +107,8 @@ help:
 	@echo "Creates an SSSOM TSV of OMIM terms.\n"
 	@echo "install"
 	@echo "Installs Python requirements with uv, for working outside the ODK container.\n"
+	@echo "clean"
+	@echo "Removes the built artefacts.\n"
 	@echo "test"
 	@echo "Runs unit tests.\n"
 	@echo "lint"
