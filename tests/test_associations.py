@@ -120,8 +120,15 @@ def test_protection_carries_the_morbidmap_row_it_coincides_with():
         ORCID, 'manually reviewed', 'MONDO:9900001', OmimMorbidmap(KEY_2, 'Wobbly knee syndrome'))
 
 
-def test_protection_of_an_association_omim_does_not_list():
-    """Modelled on OMIM:137215 (CDH1): the protected row adds a gene."""
+def test_protection_names_a_mondo_class_for_a_gene_omim_already_lists():
+    """Modelled on OMIM:137215 (CDH1 / DGLBC): the gene is the entry's own, under key 3. What the
+    protected row adds is the Mondo class for the entry's included title."""
+    assert classify([row()], [protect(mondo='MONDO:9900002', type_='included entry')], []) == [Association(
+        '900001', '900100', Predicate.GERMLINE_MUTATION,
+        CuratorProtected(ORCID, 'included entry', 'MONDO:9900002', OmimMorbidmap(KEY_3, 'Wobbly knee syndrome')))]
+
+
+def test_protection_of_a_gene_morbidmap_does_not_list_for_the_phenotype():
     associations = classify([row(gene='900100')], [protect(gene='900101')], [])
     assert associations == [
         Association('900001', '900100', Predicate.GERMLINE_MUTATION, OmimMorbidmap(KEY_3, 'Wobbly knee syndrome')),
