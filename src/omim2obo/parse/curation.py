@@ -21,10 +21,12 @@ class ProtectedRow:
     mondo_id: str
     """The Mondo class the association is meant for. Not always the one the OMIM entry maps to: for
     an entry with included titles, it may be the class for one of those."""
+
     mondo_label: str
     protection_type: str
     """The curator's reason, from a loose vocabulary: `digenic`, `included entry`, `manually
     reviewed`, …"""
+
     orcid: str | None
     comment: str
 

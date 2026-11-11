@@ -36,8 +36,10 @@ class MorbidmapRow:
     phenotype_label: str
     """As OMIM writes it, including the markers that qualify the association: `{braces}` for a
     susceptibility, `[brackets]` for a nondisease, and a leading `?` for a provisional one."""
+
     phenotype_mim: str | None
     """None when the phenotype has no entry of its own and is described within the gene's."""
+
     mapping_key: MappingKey
     gene_symbols: tuple[str, ...]
     gene_mim: str
@@ -182,6 +184,7 @@ class PhenotypicSeries:
 
     number: str
     """With its prefix, e.g. `PS900001`."""
+
     title: str
     members: tuple[str, ...]
 

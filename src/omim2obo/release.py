@@ -35,11 +35,13 @@ from omim2obo.titles import EntryTitles, entry_titles
 class Release:
     version: str
     """The release date, as YYYY-MM-DD."""
+
     entries: tuple[EntryTitles, ...] = ()
     removed: tuple[RemovedRow, ...] = ()
     mim2gene: tuple[Mim2GeneRow, ...] = ()
     symbols: tuple[tuple[str, str], ...] = ()
     """(gene MIM, HGNC symbol)"""
+
     hgnc_mappings: tuple[Mapping, ...] = ()
     series: tuple[PhenotypicSeries, ...] = ()
     morbidmap: tuple[MorbidmapRow, ...] = ()
@@ -47,6 +49,7 @@ class Release:
     references: tuple[PubmedReference, ...] = ()
     entry_mappings: tuple[Mapping, ...] = ()
     """OMIM's own mappings of its entries, to UMLS and Orphanet."""
+
     mondo_mappings: tuple[Mapping, ...] = ()
 
 

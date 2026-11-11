@@ -81,6 +81,7 @@ def parse_pubmed_refs(lines: Iterable[str]) -> list[PubmedReference]:
 class HgncGene:
     hgnc_id: str
     """As a CURIE, e.g. `HGNC:5`."""
+
     symbol: str
 
 
