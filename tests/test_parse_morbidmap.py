@@ -44,7 +44,7 @@ def test_commas_and_digits_inside_the_label_are_not_mistaken_for_the_mim():
 
 
 def test_mim_without_its_comma_is_still_the_mim():
-    """Modelled on OMIM:260350, which morbidmap writes as `Pancreatic cancer, somatic 260350 (3)`."""
+    """Modelled on OMIM:260350, written as `Pancreatic cancer, somatic 260350 (3)`."""
     [parsed] = parse_morbidmap([row('Wobbly knee, somatic 900003 (3)')])
     assert parsed.phenotype_label == 'Wobbly knee, somatic'
     assert parsed.phenotype_mim == '900003'

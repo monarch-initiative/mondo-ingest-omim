@@ -1,4 +1,4 @@
-"""Reference data from outside OMIM's downloads: mappings to other vocabularies, citations, and HGNC.
+"""Reference data from outside OMIM's downloads: mappings to other vocabularies, citations, HGNC.
 
 SSSOM files are read by the sssom package, which knows the format; what comes out is our own record.
 """
@@ -13,7 +13,7 @@ from sssom.parsers import parse_sssom_table
 
 @dataclass(frozen=True, slots=True)
 class Mapping:
-    """A statement that two identifiers, given as CURIEs, denote the same thing. Fields are SSSOM's."""
+    """A statement that two identifiers, as CURIEs, denote the same thing. Fields are SSSOM's."""
 
     subject_id: str
     predicate_id: str

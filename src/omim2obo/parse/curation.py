@@ -1,4 +1,4 @@
-"""The files Mondo's curators maintain in data/, saying where OMIM's associations should be overridden.
+"""The files Mondo's curators maintain in data/, saying where to override OMIM's associations.
 
 These are edited by hand, so unlike OMIM's own files they are checked field by field, and an error
 names the row a curator needs to look at.

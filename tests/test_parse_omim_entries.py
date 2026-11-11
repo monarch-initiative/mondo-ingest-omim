@@ -22,8 +22,8 @@ def titles(prefix, mim, preferred, alternative='', included='') -> str:
 
 
 def test_title_fields_are_kept_as_written():
-    """Modelled on OMIM:231200 (Bernard-Soulier): an entry whose included titles name the gene-specific
-    subtypes that Mondo models as separate classes."""
+    """Modelled on OMIM:231200 (Bernard-Soulier): an entry whose included titles name the
+    gene-specific subtypes that Mondo models as separate classes."""
     line = titles(
         'Number Sign',
         '900001',
@@ -37,7 +37,9 @@ def test_title_fields_are_kept_as_written():
             mim='900001',
             preferred='WOBBLY KNEE SYNDROME; WKS',
             alternative='KNEE WOBBLE;; GENU INSTABILE; GI',
-            included='WOBBLY KNEE SYNDROME, TYPE A1, INCLUDED;; WOBBLY KNEE SYNDROME, TYPE B, INCLUDED',
+            included=(
+                'WOBBLY KNEE SYNDROME, TYPE A1, INCLUDED;; WOBBLY KNEE SYNDROME, TYPE B, INCLUDED'
+            ),
         )
     ]
 
@@ -78,7 +80,7 @@ def test_unknown_prefix_is_an_error():
 def test_mim2gene_absent_identifiers_are_none():
     assert parse_mim2gene(
         [
-            '# MIM Number\tMIM Entry Type\tEntrez Gene ID (NCBI)\tApproved Gene Symbol (HGNC)\tEnsembl Gene ID\n',
+            '# MIM Number\tMIM Entry Type\tEntrez Gene ID\tApproved Gene Symbol\tEnsembl Gene ID\n',
             '900100\tgene\t99901\tFAKE1\tENSG00000999001\n',
             '900001\tphenotype\t\t\t\n',
         ]

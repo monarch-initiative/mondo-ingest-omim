@@ -269,7 +269,10 @@ def test_entry_titles():
         mim='900001',
         preferred='WOBBLY KNEE SYNDROME; WKS',
         alternative='KNEE WOBBLE OF BEHCET;; GENU INSTABILE, FORMERLY; GI, FORMERLY',
-        included='WOBBLY KNEE SYNDROME, TYPE A1, INCLUDED; WKSA1, INCLUDED;; WOBBLY KNEE SYNDROME, TYPE II, INCLUDED',
+        included=(
+            'WOBBLY KNEE SYNDROME, TYPE A1, INCLUDED; WKSA1, INCLUDED'
+            ';; WOBBLY KNEE SYNDROME, TYPE II, INCLUDED'
+        ),
     )
     assert entry_titles(row, EPONYMS) == EntryTitles(
         mim='900001',

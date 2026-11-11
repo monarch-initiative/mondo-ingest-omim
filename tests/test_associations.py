@@ -147,7 +147,7 @@ def test_exclusion_does_not_resurrect_an_unknown_defect():
 
 
 def test_digenic_disease_keeps_both_genes():
-    """Modelled on OMIM:619151 (AMED syndrome). Without protection, two rows would assert nothing."""
+    """Modelled on OMIM:619151 (AMED syndrome). Unprotected, two rows would assert nothing."""
     associations = classify(
         [row(gene='900100'), row(gene='900101')],
         [protect(gene='900100', type_='digenic'), protect(gene='900101', type_='digenic')],
@@ -162,7 +162,7 @@ def test_digenic_disease_keeps_both_genes():
 
 def test_included_terms_each_keep_their_own_mondo_class():
     """Modelled on OMIM:231200 (Bernard-Soulier): one entry, three genes, each belonging to a
-    different Mondo class. The association records which, so nothing downstream has to guess (#332)."""
+    different Mondo class. The association records which, so nothing downstream guesses: #332."""
     genes_and_classes = [
         ('900100', 'MONDO:9900002'),
         ('900101', 'MONDO:9900003'),

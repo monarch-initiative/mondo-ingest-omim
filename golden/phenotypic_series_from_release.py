@@ -1,4 +1,4 @@
-"""Reconstruct phenotypicSeries.txt from a released omim.owl, for accounts not entitled to download it.
+"""Reconstruct phenotypicSeries.txt from a released omim.owl, for accounts not entitled to it.
 
     gh release download -R monarch-initiative/omim -p omim.owl
     python3 golden/phenotypic_series_from_release.py omim.owl > omim-data/phenotypicSeries.txt
@@ -13,7 +13,8 @@ import sys
 from collections import defaultdict
 
 label_re = re.compile(
-    r'^AnnotationAssertion\(rdfs:label <https://omim\.org/phenotypicSeries/(PS\d+)> "((?:[^"\\]|\\.)*)"(?:\^\^xsd:string)?\)$'
+    r'^AnnotationAssertion\(rdfs:label <https://omim\.org/phenotypicSeries/(PS\d+)> '
+    r'"((?:[^"\\]|\\.)*)"(?:\^\^xsd:string)?\)$'
 )
 member_re = re.compile(
     r'^SubClassOf\(<https://omim\.org/entry/(\d+)> <https://omim\.org/phenotypicSeries/(PS\d+)>\)$'

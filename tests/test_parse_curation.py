@@ -59,7 +59,7 @@ def test_digenic_disease_has_a_row_for_each_gene():
 
 def test_included_entry_rows_name_a_mondo_class_other_than_the_entrys_own():
     """Modelled on OMIM:231200 (Bernard-Soulier): one entry, whose included titles Mondo models as
-    gene-specific subtypes. Each row pairs the same phenotype MIM with a different gene and class."""
+    gene-specific subtypes. Each row pairs the same phenotype MIM with another gene and class."""
     rows = parse_protected(
         [
             PROTECTED_HEADER,
@@ -87,7 +87,8 @@ def test_exclusion():
     assert parse_exclusions(
         [
             EXCLUSIONS_HEADER,
-            f'OMIM:900001\tMONDO:9900001\twobbly knee syndrome\t{ORCID}\t"caused by a somatic mutation, so not germline"\n',
+            f'OMIM:900001\tMONDO:9900001\twobbly knee syndrome\t{ORCID}'
+            '\t"caused by a somatic mutation, so not germline"\n',
         ]
     ) == [
         ExclusionRow(

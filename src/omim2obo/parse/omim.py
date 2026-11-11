@@ -11,8 +11,8 @@ from omim2obo.entry_prefix import EntryPrefix
 def data_lines(lines: Iterable[str]) -> Iterator[str]:
     """The lines of an OMIM file that carry data.
 
-    Every file opens with `#` comment lines, the last of which is the column header, and several close
-    with more of them documenting the fields.
+    Every file opens with `#` comment lines, the last of which is the column header, and several
+    close with more of them documenting the fields.
     """
     for line in lines:
         line = line.rstrip('\n')
@@ -154,7 +154,7 @@ def parse_mim2gene(lines: Iterable[str]) -> list[Mim2GeneRow]:
 
 @dataclass(frozen=True, slots=True)
 class Genemap2Row:
-    """One line of genemap2.txt, reduced to the two of its fourteen columns that the pipeline reads."""
+    """One line of genemap2.txt, reduced to the two of its fourteen columns the pipeline reads."""
 
     mim: str
     approved_symbol: str | None

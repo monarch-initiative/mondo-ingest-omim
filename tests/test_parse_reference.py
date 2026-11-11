@@ -31,7 +31,8 @@ def test_sssom_metadata_header_is_skipped_and_labels_kept():
                     '#   OMIMPS: https://omim.org/phenotypicSeries/PS\n',
                     '# mapping_set_id: http://example.org/mappings.sssom.tsv\n',
                     'subject_id\tsubject_label\tpredicate_id\tobject_id\tobject_label\tmapping_justification\n',
-                    'MONDO:9900001\twobbly knee syndrome\tskos:exactMatch\tOMIM:900001\tWobbly knee syndrome'
+                    'MONDO:9900001\twobbly knee syndrome\tskos:exactMatch\tOMIM:900001'
+                    '\tWobbly knee syndrome'
                     '\tsemapv:ManualMappingCuration\n',
                     'MONDO:9900002\t\tskos:exactMatch\tOMIMPS:900001\t\tsemapv:ManualMappingCuration\n',
                 ]
@@ -115,7 +116,7 @@ def test_known_capitalizations():
 
 
 def test_known_capitalizations_QUIRK_stray_tab_shifts_the_columns():
-    """Modelled on the `de lange` row, which is why OMIM:122470 is "cornelia lange lange syndrome"."""
+    """Modelled on the `de lange` row: why OMIM:122470 is "cornelia lange lange syndrome"."""
     assert parse_known_capitalizations(
         [
             'lower_name\tcap_name\tpattern\n',
