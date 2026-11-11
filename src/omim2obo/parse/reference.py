@@ -1,6 +1,6 @@
 """Reference data from outside OMIM's downloads: mappings to other vocabularies, citations, and HGNC.
 
-Mappings are SSSOM's own `Mapping`, read and in time written by the sssom package.
+SSSOM files are read by the sssom package, which knows the format; what comes out is our own record.
 """
 import csv
 from collections.abc import Iterable
@@ -8,12 +8,32 @@ from dataclasses import dataclass
 from typing import TextIO
 
 from sssom.parsers import parse_sssom_table
-from sssom_schema import Mapping
+
+
+@dataclass(frozen=True, slots=True)
+class Mapping:
+    """A statement that two identifiers, given as CURIEs, denote the same thing. Fields are SSSOM's."""
+    subject_id: str
+    predicate_id: str
+    object_id: str
+    mapping_justification: str
+    subject_label: str | None = None
+    object_label: str | None = None
 
 
 def parse_sssom(file: TextIO) -> list[Mapping]:
     """An SSSOM TSV, such as the OMIM mappings Mondo publishes."""
-    return parse_sssom_table(file).to_mappings()
+    return [
+        Mapping(
+            subject_id=str(m.subject_id),
+            predicate_id=str(m.predicate_id),
+            object_id=str(m.object_id),
+            mapping_justification=str(m.mapping_justification),
+            subject_label=m.subject_label and str(m.subject_label),
+            object_label=m.object_label and str(m.object_label),
+        )
+        for m in parse_sssom_table(file).to_mappings()
+    ]
 
 
 def parse_entry_mappings(lines: Iterable[str]) -> list[Mapping]:

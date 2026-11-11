@@ -2,16 +2,14 @@
 import io
 
 import pytest
-from sssom_schema import Mapping
 
 from omim2obo.parse.reference import (
-    HgncGene, PubmedReference, parse_entry_mappings, parse_hgnc, parse_known_capitalizations, parse_pubmed_refs,
+    HgncGene, Mapping, PubmedReference, parse_entry_mappings, parse_hgnc, parse_known_capitalizations, parse_pubmed_refs,
     parse_sssom)
 
 
 def mapping(subject_id, object_id, justification, **labels) -> Mapping:
-    return Mapping(subject_id=subject_id, predicate_id='skos:exactMatch', object_id=object_id,
-                   mapping_justification=justification, **labels)
+    return Mapping(subject_id, 'skos:exactMatch', object_id, justification, **labels)
 
 
 def test_sssom_metadata_header_is_skipped_and_labels_kept():
@@ -30,6 +28,10 @@ def test_sssom_metadata_header_is_skipped_and_labels_kept():
                 subject_label='wobbly knee syndrome', object_label='Wobbly knee syndrome'),
         mapping('MONDO:9900002', 'OMIMPS:900001', 'semapv:ManualMappingCuration'),
     ]
+
+
+def test_mappings_are_hashable():
+    assert len({mapping('OMIM:900001', 'UMLS:C9900001', 'semapv:UnspecifiedMatching') for _ in range(2)}) == 1
 
 
 def test_entry_mappings_are_one_per_identifier():
