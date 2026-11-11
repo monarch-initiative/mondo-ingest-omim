@@ -69,7 +69,7 @@ Three key TSV files allow manual curation interventions:
 - `.env` (from `.env.example`): OMIM download and API keys. Never read or print it.
 - `pyproject.toml`, `uv.lock`: dependencies, pytest and ruff settings. Dependency floors match what
   the ODK container ships, because the release build uses its system Python.
-- `makefile`: build targets
+- `Makefile`: build targets
 - `data/metadata.sssom.yml`: metadata for `omim.sssom.tsv`, still built by `robot` + `sssom parse`
 
 ## Notes
