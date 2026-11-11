@@ -4,3 +4,6 @@
 
 # Apply ruff's formatting and automatic fixes
 eea9a7abf9abc4c999e8879994c54f7483d299ea
+
+# Rewrap long comments and docstrings in the carried-over files
+2eb630ccd87a277f50d47f781757eff4c7dfb37f

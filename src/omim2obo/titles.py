@@ -89,9 +89,9 @@ def cleanup_title(
     title: str,
     # 'upper', 'title', 'lower', 'capitalize' (=sentence case)
     replacement_case_method: str = 'lower',
-    conjunctions: list[str] = ['and', 'but', 'yet', 'for', 'nor', 'so'],
-    little_preps: list[str] = ['at', 'by', 'in', 'of', 'on', 'to', 'up', 'as', 'it', 'or'],
-    articles: list[str] = ['a', 'an', 'the'],
+    conjunctions: tuple[str, ...] = ('and', 'but', 'yet', 'for', 'nor', 'so'),
+    little_preps: tuple[str, ...] = ('at', 'by', 'in', 'of', 'on', 'to', 'up', 'as', 'it', 'or'),
+    articles: tuple[str, ...] = ('a', 'an', 'the'),
     word_replacements: dict[str, str] = None,
 ) -> str:
     """Reformat the ALL CAPS OMIM labels to something more pleasant to read.
@@ -219,7 +219,9 @@ def recapitalize_acronyms_in_titles(
 def remove_included_and_formerly_suffixes(title: str) -> str:
     """Remove ', INCLUDED' and ', FORMERLY' suffixes from a title"""
     for suffix in ['FORMERLY', 'INCLUDED']:
-        title = re.sub(r',\s*' + suffix, '', title, re.IGNORECASE)
+        # QUIRK, kept for parity: this was `re.sub(..., title, re.IGNORECASE)`, which passes the
+        # flag as `count`. So: case-sensitive, and at most two removals.
+        title = re.sub(r',\s*' + suffix, '', title, count=2)
     return title
 
 
