@@ -39,7 +39,8 @@ def download_mim_file(file_name: str):
 
     print(f'Downloading {file_name} from OMIM...')
     url = f'https://data.omim.org/downloads/{CONFIG["DOWNLOAD_KEY"]}/{file_name}'
-    # todo: This doesn't work for genemap2.txt. But does the previous URL work? If so, why not just use that?
+    # todo: This doesn't work for genemap2.txt. But does the previous URL work? If so, why not just
+    #  use that?
     if file_name == 'mim2gene.txt':
         url = f'https://omim.org/static/omim/data/{file_name}'
     resp = requests.get(url)
@@ -91,7 +92,9 @@ def _read_cached_entry_df(path: str) -> pd.DataFrame:
 
 
 def update_cache__pubmed_refs_and_mappings(phenotypes_only_for_cache_init=False, overwrite=False):
-    """Update cache for MIM entries (pubmed refs & mappings) if cache is not complete or there is possibly new data"""
+    """Update cache for MIM entries (pubmed refs & mappings) if cache is not complete or there is
+    possibly new data
+    """
     # Load existing data
     mims_phenos: set[str] = get_all_phenotype_mims()
     mappings_df_cached = (

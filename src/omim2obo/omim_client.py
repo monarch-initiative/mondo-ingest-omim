@@ -19,45 +19,49 @@ from omim2obo.config import (
     PUBMED_REFS_PATH,
 )
 
-# BATCH_SIZE: Don't change!
-#  https://omim.org/help/api: "Entries and clinical synopses are limited to 20 per request if any 'includes' are
-#  specified, otherwise there is no limit." There are docs on that page for "includes". We set "include" to "all".
-#  However, even if this param is left out, it looks like the default behavior is "all" anyway, and it still limits to
-#  a maximum of 20/request.
+# BATCH_SIZE: Don't change! https://omim.org/help/api: "Entries and clinical synopses are limited to
+#  20 per request if any 'includes' are specified, otherwise there is no limit." There are docs on
+#  that page for "includes". We set "include" to "all". However, even if this param is left out, it
+#  looks like the default behavior is "all" anyway, and it still limits to a maximum of 20/request.
 BATCH_SIZE = 20
 OMIM_ENTRY_API_URL = 'https://api.omim.org/api/entry'
 OMIM_ENTRY_SEARCH_API_URL = OMIM_ENTRY_API_URL + '/search'
 
 LOG = logging.getLogger('OmimClient')
-# todo: alternatively, could print a short message and then prompt the user to read a tagged message in dev docs
+# todo: alternatively, could print a short message and then prompt the user to read a tagged message
+#  in dev docs
 RATE_ERR_SEED_RUN = (
-    'Rate limit error during seed run: MIMs fetched exceeded allowable API limit (normally 5,000).\n\n'
-    'The following fetching and caching strategy is set up thusly: For now, as many MIMs as possible up to this limit '
-    'will be fetched and data for them will be cached. When this process runs subsequently, it will pick up where it '
-    'left off, fetching only the MIMs that have not yet been fetched. Until it is detected that all MIMs have been '
-    f'fetched, a temporary file {CACHE_INCOMPLETENESS_INDICATOR_PATH} will be saved to indicate this status. It will be deleted when all MIMs have been '
-    f'fetched. Also, the since_date of the cache will be saved in {CACHE_LAST_UPDATED_PATH}. The since_date that will be set will be the '
-    'since_date that this fetching started, not the since_date that it completed. This is in order to account for the '
-    "possibility that a MIM's data might be updated between the start and end since_date of this initial setup "
-    'process.\n\n'
-    'After this initial setup is complete, the cache will be regularly updated in a different way, no more '
-    'than 1x/month.\n\n'
-    'Advice: After this run completes, you should manually fetch regularly, no more than 1x/day, until data for all '
-    'MIMs has been fetched.'
+    'Rate limit error during seed run: MIMs fetched exceeded allowable API limit (normally '
+    '5,000).\n\n'
+    'The following fetching and caching strategy is set up thusly: For now, as many MIMs as '
+    'possible up to this limit will be fetched and data for them will be cached. When this '
+    'process runs subsequently, it will pick up where it left off, fetching only the MIMs that '
+    'have not yet been fetched. Until it is detected that all MIMs have been fetched, a temporary '
+    f'file {CACHE_INCOMPLETENESS_INDICATOR_PATH} will be saved to indicate this status. It will be '
+    'deleted when all MIMs have been fetched. Also, the since_date of the cache will be saved in '
+    f'{CACHE_LAST_UPDATED_PATH}. The since_date that will be set will be the since_date that this '
+    'fetching started, not the since_date that it completed. This is in order to account for the '
+    "possibility that a MIM's data might be updated between the start and end since_date of this "
+    'initial setup process.\n\n'
+    'After this initial setup is complete, the cache will be regularly updated in a different way, '
+    'no more than 1x/month.\n\n'
+    'Advice: After this run completes, you should manually fetch regularly, no more than 1x/day, '
+    'until data for all MIMs has been fetched.'
 )
 RATE_ERR = (
-    'A rate limit error occurred. Unfortunately, there is currently no logic to handle this, unless the cache '
-    f'is considered incomplete and in a "seed run" state. To fix this, erase the cache by deleting {MAPPINGS_PATH}, {PUBMED_REFS_PATH}, and '
-    f'{CACHE_LAST_UPDATED_PATH}. Then, run the bulid several times, no more than once a day, until the cache has been filled.'
+    'A rate limit error occurred. Unfortunately, there is currently no logic to handle this, '
+    'unless the cache is considered incomplete and in a "seed run" state. To fix this, erase the '
+    f'cache by deleting {MAPPINGS_PATH}, {PUBMED_REFS_PATH}, and {CACHE_LAST_UPDATED_PATH}. Then, '
+    'run the bulid several times, no more than once a day, until the cache has been filled.'
 )
 
 
 def _log_incomplete_seed_run():
     """Write to disk an indication that the seed run was incomplete.
 
-    The "seed run" means the initial creation of the cache. The way it works is that if there exists no cache, we will
-    fetch all MIMs. Subsequent fetches after the seed run will only fetch since the last fetch since_date, so it's
-    important that we know if the initial cache is complete.
+    The "seed run" means the initial creation of the cache. The way it works is that if there exists
+    no cache, we will fetch all MIMs. Subsequent fetches after the seed run will only fetch since
+    the last fetch since_date, so it's important that we know if the initial cache is complete.
     """
     with open(CACHE_INCOMPLETENESS_INDICATOR_PATH, 'w') as file:
         file.write('')
@@ -69,12 +73,12 @@ class OmimClient:
 
     todo: redundancies w/ _batch_and_fetch & _fetch_since_date()?. Ideally DRY up.
     todo: might be possible to save bandwidth by filtering return fields
-    todo: Ideally would have a way to get around rate limit for non seed-running, e.g. in the event that the script
-     does not run weekly and instead several months or years pass. The workaround to this is to just re-initialize the
-     cache by deleting the cache files and re-running the build.
-    todo: For the raise RuntimeError situations in the fetch_since_date and fetch_ids methods, ideally would also be
-     good to cache what we received to this point as well for these unanticipated exceptions, as with the 'rate-limit'
-     case, then throw error in calling func.
+    todo: Ideally would have a way to get around rate limit for non seed-running, e.g. in the event
+     that the script does not run weekly and instead several months or years pass. The workaround to
+     this is to just re-initialize the cache by deleting the cache files and re-running the build.
+    todo: For the raise RuntimeError situations in the fetch_since_date and fetch_ids methods,
+     ideally would also be good to cache what we received to this point as well for these
+     unanticipated exceptions, as with the 'rate-limit' case, then throw error in calling func.
     todo: are the sleep(2)s necessary? or could we reduce?
     """
 
@@ -89,7 +93,8 @@ class OmimClient:
         update_cache_metadata=False,
         verbose=True,
     ) -> list[dict]:
-        """Fetch MIM entry data from the OMIM API. Can query by explicit IDs, or since since_date."""
+        """Fetch MIM entry data from the OMIM API. Can query by explicit IDs, or since
+        since_date."""
         # Fetch
         results: list[dict] = []
         fetch_success = False
@@ -125,7 +130,8 @@ class OmimClient:
             and update_cache_metadata
         ):
             os.remove(CACHE_INCOMPLETENESS_INDICATOR_PATH)
-        # Date: If it is a seed run, only update it the first time. Ensures no cached entries are outdated when complete
+        # Date: If it is a seed run, only update it the first time. Ensures no cached entries are
+        #  outdated when complete
         if (
             not seed_run
             or (seed_run and not os.path.exists(CACHE_LAST_UPDATED_PATH))
@@ -212,7 +218,8 @@ class OmimClient:
                 raise RuntimeError(err)
             elif len(entries) != len(ids_i):
                 raise RuntimeError(
-                    f'Query on ids {ids_i} returned {len(entries)} results, but expected {len(ids_i)}.'
+                    f'Query on ids {ids_i} returned {len(entries)} results, but expected '
+                    f'{len(ids_i)}.'
                 )
             elif not entries:
                 raise RuntimeError(f'Query on ids {ids_i} returned no results.')
@@ -221,7 +228,7 @@ class OmimClient:
         return results, fetch_success
 
     @staticmethod
-    def _request(url: str, params: dict = {}, seed_run=False) -> tuple[dict, str | None]:
+    def _request(url: str, params: dict = None, seed_run=False) -> tuple[dict, str | None]:
         """Submit reques to OMIM API, and handle errors.
         todo: If error occurs, better pattern is probably raising error and including the data
         """
