@@ -10,7 +10,10 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = [
+    "pytest>=8",
+    "ruff>=0.17.4",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -18,3 +21,24 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+extend-exclude = [
+    "legacy",                       # frozen until it is deleted
+    "analyses", "dev", "*.ipynb", "*.md",
+    "src/omim2obo/romanplus.py",    # third-party code, kept as it came
+]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# Carried over from the legacy pipeline. Their long comment lines are left as their authors wrote
+# them, and titles.py keeps two things on purpose; B034 is one, marked QUIRK there.
+"src/omim2obo/titles.py" = ["E501", "B006", "B034"]
+"src/omim2obo/predicates.py" = ["E501"]
+"src/omim2obo/entry_prefix.py" = ["E501"]
