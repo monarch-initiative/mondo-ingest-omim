@@ -42,7 +42,7 @@ morbidmap-protected-added-with-header.tsv
 /*.ttl
 /*.txt
 
-# Golden-file capture: licensed inputs and the outputs derived from them
+# Golden-file capture: licensed inputs (the makefile's default OMIM_DATA) and outputs derived from them
 /omim-data/
 /golden/inputs/
 /golden/out/

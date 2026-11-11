@@ -107,9 +107,12 @@ install:
 test:
 	 python3 -m unittest discover -v -s legacy/tests -t legacy
 
-# Capture golden outputs from the legacy pipeline on main. Needs Docker and OMIM's downloads in omim-data/
+# Capture golden outputs from the legacy pipeline on main. Needs Docker and OMIM's downloads
+# OMIM_DATA: where OMIM's licensed .txt downloads are kept. They are never committed.
+OMIM_DATA ?= omim-data
+
 golden:
-	golden/capture.sh
+	OMIM_DATA=$(OMIM_DATA) golden/capture.sh
 
 # HELP -----------------------------------------------------------------------------------------------------------------
 help:
