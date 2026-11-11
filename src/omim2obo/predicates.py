@@ -1,11 +1,14 @@
 """The predicates a disease-gene association can take, and how morbidmap's mapping keys choose them."""
+
 from enum import Enum
 
 from omim2obo.parse.omim import MappingKey
 
 
 class Predicate(Enum):
-    GERMLINE_MUTATION = 'RO:0004003'  # disease to gene; rendered together with its inverse, RO:0004013
+    GERMLINE_MUTATION = (
+        'RO:0004003'  # disease to gene; rendered together with its inverse, RO:0004013
+    )
     CAUSES = 'RO:0003303'  # gene to disease, as are the rest
     CONTRIBUTES = 'RO:0003304'
     CAUSES_OR_CONTRIBUTES = 'RO:0003302'
@@ -19,16 +22,13 @@ class Predicate(Enum):
 # "3": "sequencing assay evidence"
 # "4": "sequencing assay evidence"
 MORBIDMAP_PHENOTYPE_MAPPING_KEY_MEANINGS = {
-    MappingKey.UNKNOWN_DEFECT:
-         'The disorder is placed on the map based on its association with a gene, but the underlying defect is '
-         'not known.',
-    MappingKey.LINKAGE:
-         'The disorder has been placed on the map by linkage or other statistical method; no mutation has '
-         'been found.',
+    MappingKey.UNKNOWN_DEFECT: 'The disorder is placed on the map based on its association with a gene, but the underlying defect is '
+    'not known.',
+    MappingKey.LINKAGE: 'The disorder has been placed on the map by linkage or other statistical method; no mutation has '
+    'been found.',
     MappingKey.MOLECULAR_BASIS_KNOWN: 'The molecular basis for the disorder is known; a mutation has been found in the gene.',
-    MappingKey.CONTIGUOUS_GENE_SYNDROME:
-         'A contiguous gene deletion or duplication syndrome, multiple genes are deleted or duplicated causing '
-         'the phenotype.',
+    MappingKey.CONTIGUOUS_GENE_SYNDROME: 'A contiguous gene deletion or duplication syndrome, multiple genes are deleted or duplicated causing '
+    'the phenotype.',
 }
 # todo: double check / handle edge cases if/as needed for any concerns:
 #  - https://github.com/monarch-initiative/omim/issues/79#issuecomment-1319408780

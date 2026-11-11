@@ -2,6 +2,7 @@
 
 SSSOM files are read by the sssom package, which knows the format; what comes out is our own record.
 """
+
 import csv
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ from sssom.parsers import parse_sssom_table
 @dataclass(frozen=True, slots=True)
 class Mapping:
     """A statement that two identifiers, given as CURIEs, denote the same thing. Fields are SSSOM's."""
+
     subject_id: str
     predicate_id: str
     object_id: str
@@ -60,6 +62,7 @@ def parse_entry_mappings(lines: Iterable[str]) -> list[Mapping]:
 @dataclass(frozen=True, slots=True)
 class PubmedReference:
     """A publication cited by an OMIM entry."""
+
     mim: str
     pmid: str
 
@@ -86,7 +89,9 @@ def parse_hgnc(lines: Iterable[str]) -> list[HgncGene]:
     table = csv.DictReader(lines, delimiter='\t')
     for row in table:
         if not (row['hgnc_id'] and row['symbol']):
-            raise ValueError(f'hgnc_complete_set.txt, line {table.line_num}: missing hgnc_id or symbol')
+            raise ValueError(
+                f'hgnc_complete_set.txt, line {table.line_num}: missing hgnc_id or symbol'
+            )
         genes.append(HgncGene(row['hgnc_id'], row['symbol']))
     return genes
 

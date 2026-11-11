@@ -7,10 +7,17 @@ The pipeline takes three things from that file: each series' number, its title, 
 All three are in the released OWL, so the file can be rebuilt to give the same axioms. The third
 column of member rows, a phenotype label the pipeline never reads, is filled with a placeholder.
 """
-import re, sys
+
+import re
+import sys
 from collections import defaultdict
-label_re = re.compile(r'^AnnotationAssertion\(rdfs:label <https://omim\.org/phenotypicSeries/(PS\d+)> "((?:[^"\\]|\\.)*)"(?:\^\^xsd:string)?\)$')
-member_re = re.compile(r'^SubClassOf\(<https://omim\.org/entry/(\d+)> <https://omim\.org/phenotypicSeries/(PS\d+)>\)$')
+
+label_re = re.compile(
+    r'^AnnotationAssertion\(rdfs:label <https://omim\.org/phenotypicSeries/(PS\d+)> "((?:[^"\\]|\\.)*)"(?:\^\^xsd:string)?\)$'
+)
+member_re = re.compile(
+    r'^SubClassOf\(<https://omim\.org/entry/(\d+)> <https://omim\.org/phenotypicSeries/(PS\d+)>\)$'
+)
 decl_re = re.compile(r'^Declaration\(Class\(<https://omim\.org/phenotypicSeries/(PS\d+)>\)\)$')
 labels, members, declared = {}, defaultdict(list), set()
 for line in open(sys.argv[1]):

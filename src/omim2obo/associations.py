@@ -1,16 +1,22 @@
 """Disease-gene associations: what OMIM's morbidmap and Mondo's curators together assert."""
+
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
 
 from omim2obo.parse.curation import ExclusionRow, ProtectedRow
 from omim2obo.parse.omim import MappingKey, MorbidmapRow
-from omim2obo.predicates import MORBIDMAP_PHENOTYPE_MAPPING_KEY_PREDICATES, Predicate, p2g_is_definitive
+from omim2obo.predicates import (
+    MORBIDMAP_PHENOTYPE_MAPPING_KEY_PREDICATES,
+    Predicate,
+    p2g_is_definitive,
+)
 
 
 @dataclass(frozen=True, slots=True)
 class OmimMorbidmap:
     """OMIM says so, in a row of morbidmap."""
+
     mapping_key: MappingKey
     phenotype_label: str
 
@@ -18,6 +24,7 @@ class OmimMorbidmap:
 @dataclass(frozen=True, slots=True)
 class CuratorProtected:
     """A curator asserted it, in protected-disease-gene.tsv."""
+
     orcid: str | None
     protection_type: str
     mondo_id: str
@@ -28,6 +35,7 @@ class CuratorProtected:
 @dataclass(frozen=True, slots=True)
 class CuratorExcluded:
     """OMIM says so, but a curator has excluded the phenotype, which weakens it to the hedge."""
+
     orcid: str | None
     reason: str
     omim: OmimMorbidmap
@@ -45,7 +53,9 @@ class Association:
 
 
 def classify(
-    morbidmap: Iterable[MorbidmapRow], protected: Iterable[ProtectedRow], exclusions: Iterable[ExclusionRow],
+    morbidmap: Iterable[MorbidmapRow],
+    protected: Iterable[ProtectedRow],
+    exclusions: Iterable[ExclusionRow],
 ) -> list[Association]:
     rows_by_phenotype: dict[str, list[MorbidmapRow]] = defaultdict(list)
     for row in morbidmap:
@@ -72,26 +82,45 @@ def classify(
 
             if pair in protections:
                 associations += [
-                    Association(*pair, Predicate.GERMLINE_MUTATION, CuratorProtected(
-                        protection.orcid, protection.protection_type, protection.mondo_id, omim))
+                    Association(
+                        *pair,
+                        Predicate.GERMLINE_MUTATION,
+                        CuratorProtected(
+                            protection.orcid, protection.protection_type, protection.mondo_id, omim
+                        ),
+                    )
                     for protection in protections[pair]
                 ]
             elif row.mapping_key is MappingKey.UNKNOWN_DEFECT:
                 continue
             elif exclusion := exclusion_of.get(phenotype_mim):
-                associations.append(Association(*pair, Predicate.CAUSES_OR_CONTRIBUTES, CuratorExcluded(
-                    exclusion.orcid, exclusion.reason, omim)))
+                associations.append(
+                    Association(
+                        *pair,
+                        Predicate.CAUSES_OR_CONTRIBUTES,
+                        CuratorExcluded(exclusion.orcid, exclusion.reason, omim),
+                    )
+                )
             elif row.mapping_key is not MappingKey.MOLECULAR_BASIS_KNOWN:
-                predicate = MORBIDMAP_PHENOTYPE_MAPPING_KEY_PREDICATES[row.mapping_key] if sole_row \
+                predicate = (
+                    MORBIDMAP_PHENOTYPE_MAPPING_KEY_PREDICATES[row.mapping_key]
+                    if sole_row
                     else Predicate.CAUSES_OR_CONTRIBUTES
+                )
                 associations.append(Association(*pair, predicate, omim))
             elif sole_row and p2g_is_definitive(row.phenotype_label):
                 associations.append(Association(*pair, Predicate.GERMLINE_MUTATION, omim))
 
     associations += [
-        Association(*pair, Predicate.GERMLINE_MUTATION, CuratorProtected(
-            protection.orcid, protection.protection_type, protection.mondo_id, omim=None))
-        for pair, pair_protections in protections.items() if pair not in in_morbidmap
+        Association(
+            *pair,
+            Predicate.GERMLINE_MUTATION,
+            CuratorProtected(
+                protection.orcid, protection.protection_type, protection.mondo_id, omim=None
+            ),
+        )
+        for pair, pair_protections in protections.items()
+        if pair not in in_morbidmap
         for protection in pair_protections
     ]
     return associations

@@ -1,5 +1,6 @@
 """Fixtures are synthetic: MIM numbers in the 9xxxxx range and invented names. OMIM assigns nothing
 above the 6xxxxx range, and its real files are licensed and cannot be committed."""
+
 import pytest
 
 from omim2obo.parse.omim import MappingKey, MorbidmapRow, parse_morbidmap
@@ -56,12 +57,15 @@ def test_dangling_comma_is_not_part_of_the_label():
     assert parsed.phenotype_mim is None
 
 
-@pytest.mark.parametrize('label', [
-    '{Wobbly knee, susceptibility to}',
-    '[Knee wobble level QTL 1]',
-    '?Wobbly knee syndrome 2',
-    '{?Wobbly knee, susceptibility to, 3}',
-])
+@pytest.mark.parametrize(
+    'label',
+    [
+        '{Wobbly knee, susceptibility to}',
+        '[Knee wobble level QTL 1]',
+        '?Wobbly knee syndrome 2',
+        '{?Wobbly knee, susceptibility to, 3}',
+    ],
+)
 def test_markers_qualifying_the_association_stay_on_the_label(label):
     """https://omim.org/help/faq#1_6. What they mean for the association is decided downstream; the
     parser's job is to not lose them."""
@@ -78,10 +82,12 @@ def test_every_mapping_key(key):
 def test_same_phenotype_and_gene_under_two_labels_gives_two_rows():
     """Modelled on OMIM:613443, an entry with an included title: morbidmap names the entry's own
     phenotype and the included one separately, each with its own mapping key."""
-    parsed = parse_morbidmap([
-        row('Chromosome 99q deletion syndrome, 900005 (4)'),
-        row('Neurodevelopmental disorder with wobbling, 900005 (3)'),
-    ])
+    parsed = parse_morbidmap(
+        [
+            row('Chromosome 99q deletion syndrome, 900005 (4)'),
+            row('Neurodevelopmental disorder with wobbling, 900005 (3)'),
+        ]
+    )
     assert [(r.phenotype_label, r.mapping_key) for r in parsed] == [
         ('Chromosome 99q deletion syndrome', MappingKey.CONTIGUOUS_GENE_SYNDROME),
         ('Neurodevelopmental disorder with wobbling', MappingKey.MOLECULAR_BASIS_KNOWN),

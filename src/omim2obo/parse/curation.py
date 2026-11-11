@@ -3,6 +3,7 @@
 These are edited by hand, so unlike OMIM's own files they are checked field by field, and an error
 names the row a curator needs to look at.
 """
+
 import csv
 import re
 from collections.abc import Iterable, Iterator
@@ -13,6 +14,7 @@ from dataclasses import dataclass
 class ProtectedRow:
     """One line of protected-disease-gene.tsv: a disease-gene association a curator has asserted,
     to be kept whatever OMIM's files say."""
+
     phenotype_mim: str
     gene_mim: str
     hgnc_id: str
@@ -31,6 +33,7 @@ class ProtectedRow:
 class ExclusionRow:
     """One line of exclusions-disease-gene.tsv: a phenotype for which a curator has rejected the
     disease-gene associations the pipeline would otherwise assert."""
+
     phenotype_mim: str
     mondo_id: str
     mondo_label: str
@@ -74,6 +77,7 @@ _HGNC = re.compile(r'HGNC:\d+')
 
 class _Row(dict[str, str]):
     """A row that remembers where it came from, for error messages."""
+
     where: str
 
 
@@ -90,7 +94,9 @@ def _rows(file_name: str, lines: Iterable[str]) -> Iterator[_Row]:
 def _curie(row: _Row, column: str, pattern: re.Pattern[str]) -> str:
     value = row[column]
     if not pattern.fullmatch(value):
-        raise ValueError(f'{row.where}: {column} is {value!r}, expected something like {pattern.pattern!r}')
+        raise ValueError(
+            f'{row.where}: {column} is {value!r}, expected something like {pattern.pattern!r}'
+        )
     return value
 
 

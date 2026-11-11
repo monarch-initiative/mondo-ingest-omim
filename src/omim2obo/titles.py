@@ -1,7 +1,7 @@
 """Turning OMIM's ALL CAPS title fields into readable titles and symbols."""
+
 import re
 from dataclasses import dataclass
-from typing import List, Dict, Set, Tuple, Union
 
 from omim2obo.parse.omim import EntryPrefix, TitleRow
 from omim2obo.romanplus import fromRoman, romanNumeralPattern, toRoman
@@ -10,6 +10,7 @@ from omim2obo.romanplus import fromRoman, romanNumeralPattern, toRoman
 @dataclass(frozen=True, slots=True)
 class TitleGroup:
     """One of an entry's title fields, split and cleaned."""
+
     titles: tuple[str, ...]
     symbols: tuple[str, ...]
     former_titles: tuple[str, ...]
@@ -35,21 +36,25 @@ def entry_titles(row: TitleRow, capitalizations: dict[str, str]) -> EntryTitles:
 
     def group(titles, symbols_, former_titles, former_symbols) -> TitleGroup:
         return TitleGroup(
-            tuple(recapitalize_acronyms_in_titles(titles, symbols)), tuple(symbols_),
-            tuple(recapitalize_acronyms_in_titles(former_titles, symbols)), tuple(former_symbols))
+            tuple(recapitalize_acronyms_in_titles(titles, symbols)),
+            tuple(symbols_),
+            tuple(recapitalize_acronyms_in_titles(former_titles, symbols)),
+            tuple(former_symbols),
+        )
 
     return EntryTitles(
         mim=row.mim,
         prefix=row.prefix,
         preferred_title=recapitalize_acronyms_in_title(
-            cleanup_title(preferred_title, word_replacements=capitalizations), symbols),
+            cleanup_title(preferred_title, word_replacements=capitalizations), symbols
+        ),
         preferred_symbols=tuple(preferred_symbols),
         alternative=group(*alternative),
         included=group(*included),
     )
 
 
-def detect_abbreviations(label: str, capitalization_threshold=0.75) -> List[str]:
+def detect_abbreviations(label: str, capitalization_threshold=0.75) -> list[str]:
     """Detect possible abbreviations / acronyms"""
     # Compile regexp
     # todo: handle several warnings: {1} redundant, {1,} simplified to +
@@ -65,16 +70,15 @@ def detect_abbreviations(label: str, capitalization_threshold=0.75) -> List[str]
     for word in words:
         if word.upper() == word:
             fully_capitalized_count += 1
-    is_largely_uppercase = \
-        fully_capitalized_count / len(words) >= capitalization_threshold
+    is_largely_uppercase = fully_capitalized_count / len(words) >= capitalization_threshold
 
     # Detect cases
     if is_largely_uppercase:
         acronyms_without_periods = []  # can't infer because everything was uppercase
     else:
-        acronyms_without_periods: List[str] = acronyms_without_periods_compiler.findall(label)
-    title_cased_abbrevs: List[str] = title_cased_abbrev_compiler.findall(label)
-    acronyms_with_periods: List[str] = acronyms_with_periods_compiler.findall(label)
+        acronyms_without_periods: list[str] = acronyms_without_periods_compiler.findall(label)
+    title_cased_abbrevs: list[str] = title_cased_abbrev_compiler.findall(label)
+    acronyms_with_periods: list[str] = acronyms_with_periods_compiler.findall(label)
 
     return acronyms_with_periods + acronyms_without_periods + title_cased_abbrevs
 
@@ -83,10 +87,10 @@ def detect_abbreviations(label: str, capitalization_threshold=0.75) -> List[str]
 def cleanup_title(
     title: str,
     replacement_case_method: str = 'lower',  # 'upper', 'title', 'lower', 'capitalize' (=sentence case)
-    conjunctions: List[str] = ['and', 'but', 'yet', 'for', 'nor', 'so'],
-    little_preps: List[str] = ['at', 'by', 'in', 'of', 'on', 'to', 'up', 'as', 'it', 'or'],
-    articles: List[str] = ['a', 'an', 'the'],
-    word_replacements: Dict[str, str] = None,
+    conjunctions: list[str] = ['and', 'but', 'yet', 'for', 'nor', 'so'],
+    little_preps: list[str] = ['at', 'by', 'in', 'of', 'on', 'to', 'up', 'as', 'it', 'or'],
+    articles: list[str] = ['a', 'an', 'the'],
+    word_replacements: dict[str, str] = None,
 ) -> str:
     """Reformat the ALL CAPS OMIM labels to something more pleasant to read.
 
@@ -159,7 +163,9 @@ def cleanup_title(
     return label_newcase
 
 
-def recapitalize_acronyms_in_title(title: str, known_abbrevs: Set[str] = None, capitalization_threshold=0.75) -> str:
+def recapitalize_acronyms_in_title(
+    title: str, known_abbrevs: set[str] = None, capitalization_threshold=0.75
+) -> str:
     """Re-capitalize acronyms / words based on information contained w/in original label
 
     todo: If title has been used on cleanup_title() using a replacement_case_method other than the non-default 'lower',
@@ -175,11 +181,11 @@ def recapitalize_acronyms_in_title(title: str, known_abbrevs: Set[str] = None, c
       part. It is also possible to improve detect_abbreviations() by considering some of thes eother possible example
       cases above.
     """
-    inferred_abbrevs: Set[str] = set(detect_abbreviations(title, capitalization_threshold))
-    abbrevs: Set[str] = known_abbrevs.union(inferred_abbrevs)
+    inferred_abbrevs: set[str] = set(detect_abbreviations(title, capitalization_threshold))
+    abbrevs: set[str] = known_abbrevs.union(inferred_abbrevs)
     if not abbrevs:
         return title
-    title2_words: List[str] = []
+    title2_words: list[str] = []
     for word in title.split():
         abbrev_match = False
         for abbrev in abbrevs:
@@ -194,12 +200,15 @@ def recapitalize_acronyms_in_title(title: str, known_abbrevs: Set[str] = None, c
 
 
 def recapitalize_acronyms_in_titles(
-    titles: Union[str, List[str]], known_abbrevs: Set[str] = None, capitalization_threshold=0.75
-) -> Union[str, List[str]]:
+    titles: str | list[str], known_abbrevs: set[str] = None, capitalization_threshold=0.75
+) -> str | list[str]:
     """Re-capitalize acronyms in a list of titles"""
     if isinstance(titles, str):
         return recapitalize_acronyms_in_title(titles, known_abbrevs, capitalization_threshold)
-    return [recapitalize_acronyms_in_title(title, known_abbrevs, capitalization_threshold) for title in titles]
+    return [
+        recapitalize_acronyms_in_title(title, known_abbrevs, capitalization_threshold)
+        for title in titles
+    ]
 
 
 def remove_included_and_formerly_suffixes(title: str) -> str:
@@ -210,8 +219,8 @@ def remove_included_and_formerly_suffixes(title: str) -> str:
 
 
 def separate_former_titles_and_symbols(
-    titles: List[str], symbols: List[str]
-) -> Tuple[List[str], List[str], List[str], List[str]]:
+    titles: list[str], symbols: list[str]
+) -> tuple[list[str], list[str], list[str], list[str]]:
     """Separate current title/symbols from deprecated (marked 'former') ones"""
     former_titles = [x for x in titles if ', FORMERLY' in x.upper()]
     former_symbols = [x for x in symbols if ', FORMERLY' in x.upper()]
@@ -221,8 +230,8 @@ def separate_former_titles_and_symbols(
 
 
 def clean_alt_and_included_titles(
-    titles: List[str], symbols: List[str], word_replacements: Dict[str, str]
-) -> Tuple[List[str], List[str]]:
+    titles: list[str], symbols: list[str], word_replacements: dict[str, str]
+) -> tuple[list[str], list[str]]:
     """Remove ', INCLUDED' and ', FORMERLY' suffixes from titles/symbols & misc title reformatting"""
     # remove ', included' and ', formerly', if present
     titles2 = [remove_included_and_formerly_suffixes(x) for x in titles]
@@ -232,7 +241,7 @@ def clean_alt_and_included_titles(
     return titles3, symbols2
 
 
-def parse_title_symbol_pairs(title_symbol_pairs_str: str) -> Tuple[List[str], List[str]]:
+def parse_title_symbol_pairs(title_symbol_pairs_str: str) -> tuple[list[str], list[str]]:
     """Parses a string containing title-symbol pairs.
 
     :param title_symbol_pairs_str: A string representing title-symbol pairs.
@@ -250,27 +259,31 @@ def parse_title_symbol_pairs(title_symbol_pairs_str: str) -> Tuple[List[str], Li
       Included Title(s); symbols:
         CRANIOFACIAL-SKELETAL-DERMATOLOGIC DYSPLASIA, INCLUDED
     """
-    titles: List[str] = []
-    symbols: List[str] = []
-    title_symbol_pairs: List[str] = title_symbol_pairs_str.split(';;')
+    titles: list[str] = []
+    symbols: list[str] = []
+    title_symbol_pairs: list[str] = title_symbol_pairs_str.split(';;')
     for pair_str in title_symbol_pairs:
-        pair: List[str] = [x.strip() for x in pair_str.split(';')]
+        pair: list[str] = [x.strip() for x in pair_str.split(';')]
         titles.append(pair[0])
         symbols.extend(pair[1:])
     return titles, symbols
 
 
 def get_alt_and_included_titles_and_symbols(
-    title_symbol_pair_str, word_replacements: Dict[str, str]
-) -> Tuple[List[str], List[str], List[str], List[str]]:
+    title_symbol_pair_str, word_replacements: dict[str, str]
+) -> tuple[list[str], list[str], list[str], list[str]]:
     """Separates different types of titles/symbols, and cleans them."""
-    titles: List[str] = []
-    symbols: List[str] = []
-    former_titles: List[str] = []
-    former_symbols: List[str] = []
+    titles: list[str] = []
+    symbols: list[str] = []
+    former_titles: list[str] = []
+    former_symbols: list[str] = []
     if title_symbol_pair_str:
         titles, symbols = parse_title_symbol_pairs(title_symbol_pair_str)
-        titles, symbols, former_titles, former_symbols = separate_former_titles_and_symbols(titles, symbols)
+        titles, symbols, former_titles, former_symbols = separate_former_titles_and_symbols(
+            titles, symbols
+        )
         titles, symbols = clean_alt_and_included_titles(titles, symbols, word_replacements)
-        former_titles, former_symbols = clean_alt_and_included_titles(former_titles, former_symbols, word_replacements)
+        former_titles, former_symbols = clean_alt_and_included_titles(
+            former_titles, former_symbols, word_replacements
+        )
     return titles, symbols, former_titles, former_symbols

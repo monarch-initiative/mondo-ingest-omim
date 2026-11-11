@@ -8,6 +8,7 @@ editing the legacy code:
 - The PubMed/UMLS/Orphanet cache refresh calls the OMIM API unconditionally. It is replaced with a
   no-op, so the build uses `data/mappings.tsv` and `data/pubmed-refs.tsv` exactly as committed.
 """
+
 import omim2obo.parsers.omim_txt_parser as omim_txt_parser
 from omim2obo.main import omim2obo
 

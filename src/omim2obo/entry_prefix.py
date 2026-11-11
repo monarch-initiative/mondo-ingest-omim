@@ -1,4 +1,5 @@
 """OMIM Types"""
+
 from enum import Enum
 
 
@@ -32,6 +33,7 @@ class EntryPrefix(Enum):
     - the description of symbols used in the disorder column of the OMIM Gene Map and Morbid Map.
     - data/symbolic_prefixes.tsv for a tabular version of this information
     """
+
     GENE = 'Asterisk'  # *
     GENE_AND_PHENOTYPE = 'Plus'  # +
     PHENOTYPE = 'Number Sign'  # #
