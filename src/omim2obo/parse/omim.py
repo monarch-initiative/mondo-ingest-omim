@@ -4,6 +4,8 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from enum import Enum
 
+from omim2obo.entry_prefix import EntryPrefix
+
 
 def data_lines(lines: Iterable[str]) -> Iterator[str]:
     """The lines of an OMIM file that carry data.
@@ -18,21 +20,11 @@ def data_lines(lines: Iterable[str]) -> Iterator[str]:
 
 
 class MappingKey(Enum):
-    """The phenotype mapping key: how the phenotype came to be associated with the locus.
-
-    Descriptions are OMIM's own, from the footer of morbidmap.txt.
-    """
+    """The phenotype mapping key: how the phenotype came to be associated with the locus."""
     UNKNOWN_DEFECT = 1
-    """The disorder is placed on the map based on its association with a gene, but the underlying
-    defect is not known."""
     LINKAGE = 2
-    """The disorder has been placed on the map by linkage or other statistical method; no mutation has
-    been found."""
     MOLECULAR_BASIS_KNOWN = 3
-    """The molecular basis for the disorder is known; a mutation has been found in the gene."""
     CONTIGUOUS_GENE_SYNDROME = 4
-    """A contiguous gene deletion or duplication syndrome, multiple genes are deleted or duplicated
-    causing the phenotype."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,23 +68,6 @@ def parse_morbidmap(lines: Iterable[str]) -> list[MorbidmapRow]:
             cyto_location=cyto_location,
         ))
     return rows
-
-
-class EntryPrefix(Enum):
-    """The symbol before a MIM number, saying what kind of thing the entry describes.
-
-    Values are how mimTitles.txt spells them; descriptions are OMIM's own, from its footer.
-    """
-    GENE = 'Asterisk'
-    """Gene"""
-    GENE_AND_PHENOTYPE = 'Plus'
-    """Gene and phenotype, combined"""
-    PHENOTYPE = 'Number Sign'
-    """Phenotype, molecular basis known"""
-    PHENOTYPE_OR_LOCUS = 'Percent'
-    """Phenotype or locus, molecular basis unknown"""
-    OTHER = 'NULL'
-    """Other, mainly phenotypes with suspected mendelian basis"""
 
 
 @dataclass(frozen=True, slots=True)

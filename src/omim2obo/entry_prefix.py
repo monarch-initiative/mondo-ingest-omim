@@ -1,9 +1,8 @@
 """OMIM Types"""
 from enum import Enum
-from omim2obo.namespaces import *
 
 
-class OmimType(Enum):
+class EntryPrefix(Enum):
     """From OMIM docs: What do the symbols preceding a MIM number represent?
 
     *: An asterisk (*) before an entry number indicates a **gene**.
@@ -33,24 +32,8 @@ class OmimType(Enum):
     - the description of symbols used in the disorder column of the OMIM Gene Map and Morbid Map.
     - data/symbolic_prefixes.tsv for a tabular version of this information
     """
-    OBSOLETE = HP['0031859']  # Caret ^
-    GENE = SO['0000704']  # Asterisk *
-    SUSPECTED = NCIT.C71458  # NULL
-    PHENOTYPE = UPHENO['0001001']  # Number Sign #
-    HERITABLE_PHENOTYPIC_MARKER = SO['0001500']  # Percent %
-    HAS_AFFECTED_FEATURE = GENO['0000418']  # Plus +
-
-
-OMIM_PREFIX = {
-    '^': HP['0031859'],
-    '*': SO['0000704'],
-    '#': UPHENO['0001001'],
-    '%': SO['0001500'],
-    '+': GENO['0000418'],
-    None: NCIT.C71458
-}
-
-
-def get_omim_type(prefix):
-    """Return OMIM type from OMIM prefix map"""
-    return OMIM_PREFIX[prefix]
+    GENE = 'Asterisk'  # *
+    GENE_AND_PHENOTYPE = 'Plus'  # +
+    PHENOTYPE = 'Number Sign'  # #
+    PHENOTYPE_OR_LOCUS = 'Percent'  # %
+    OTHER = 'NULL'  # ''

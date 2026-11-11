@@ -1,10 +1,10 @@
 """Fixtures are synthetic: MIM numbers in the 9xxxxx range, phenotypes 9000xx and genes 9001xx."""
 import pytest
 
-from omim2obo.associations import (
-    Association, CuratorExcluded, CuratorProtected, OmimMorbidmap, Predicate, classify)
+from omim2obo.associations import Association, CuratorExcluded, CuratorProtected, OmimMorbidmap, classify
 from omim2obo.parse.curation import ExclusionRow, ProtectedRow
 from omim2obo.parse.omim import MappingKey, MorbidmapRow
+from omim2obo.predicates import Predicate
 
 KEY_1, KEY_2, KEY_3, KEY_4 = MappingKey
 ORCID = 'https://orcid.org/0000-0000-0000-0001'

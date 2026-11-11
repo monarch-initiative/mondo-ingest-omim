@@ -2,31 +2,10 @@
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
-from enum import Enum
 
 from omim2obo.parse.curation import ExclusionRow, ProtectedRow
 from omim2obo.parse.omim import MappingKey, MorbidmapRow
-
-
-class Predicate(Enum):
-    GERMLINE_MUTATION = 'RO:0004003'
-    """has material basis in germline mutation in: disease to gene. The only predicate that says the
-    gene defines the disease. Rendered together with its inverse, RO:0004013."""
-    CAUSES = 'RO:0003303'
-    """causes condition: gene to disease."""
-    CONTRIBUTES = 'RO:0003304'
-    """contributes to condition: gene to disease."""
-    CAUSES_OR_CONTRIBUTES = 'RO:0003302'
-    """causes or contributes to condition: gene to disease. The hedge, for when more than one gene or
-    mechanism is in play. https://github.com/monarch-initiative/omim/issues/75 and /81"""
-
-
-# Why each key maps as it does: https://github.com/monarch-initiative/omim/issues/79#issuecomment-1319408780
-# Key 1, an association whose underlying defect is not known, asserts nothing.
-NON_CAUSAL_PREDICATE = {
-    MappingKey.LINKAGE: Predicate.CAUSES,
-    MappingKey.CONTIGUOUS_GENE_SYNDROME: Predicate.CONTRIBUTES,
-}
+from omim2obo.predicates import MORBIDMAP_PHENOTYPE_MAPPING_KEY_PREDICATES, Predicate, p2g_is_definitive
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,12 +42,6 @@ class Association:
     gene_mim: str
     predicate: Predicate
     provenance: Provenance
-
-
-def is_definitive(phenotype_label: str) -> bool:
-    """Whether OMIM presents the phenotype without qualification: not a `[nondisease]`, not a
-    `{susceptibility}`, and not `?provisional`. https://omim.org/help/faq#1_6"""
-    return not phenotype_label.startswith(('[', '{', '?'))
 
 
 def classify(
@@ -109,9 +82,10 @@ def classify(
                 associations.append(Association(*pair, Predicate.CAUSES_OR_CONTRIBUTES, CuratorExcluded(
                     exclusion.orcid, exclusion.reason, omim)))
             elif row.mapping_key is not MappingKey.MOLECULAR_BASIS_KNOWN:
-                predicate = NON_CAUSAL_PREDICATE[row.mapping_key] if sole_row else Predicate.CAUSES_OR_CONTRIBUTES
+                predicate = MORBIDMAP_PHENOTYPE_MAPPING_KEY_PREDICATES[row.mapping_key] if sole_row \
+                    else Predicate.CAUSES_OR_CONTRIBUTES
                 associations.append(Association(*pair, predicate, omim))
-            elif sole_row and is_definitive(row.phenotype_label):
+            elif sole_row and p2g_is_definitive(row.phenotype_label):
                 associations.append(Association(*pair, Predicate.GERMLINE_MUTATION, omim))
 
     associations += [
