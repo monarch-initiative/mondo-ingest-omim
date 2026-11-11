@@ -854,7 +854,10 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "curies" },
+    { name = "pandas" },
+    { name = "python-dotenv" },
     { name = "rdflib" },
+    { name = "requests" },
     { name = "sssom" },
 ]
 
@@ -867,7 +870,10 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "curies", specifier = ">=0.7.10" },
+    { name = "pandas", specifier = ">=2.2" },
+    { name = "python-dotenv", specifier = ">=1.0" },
     { name = "rdflib", specifier = ">=7.1.1" },
+    { name = "requests", specifier = ">=2.31" },
     { name = "sssom", specifier = ">=0.4.12" },
 ]
 
