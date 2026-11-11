@@ -853,6 +853,7 @@ name = "omim2obo"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "rdflib" },
     { name = "sssom" },
 ]
 
@@ -863,7 +864,10 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "sssom", specifier = ">=0.4.17" }]
+requires-dist = [
+    { name = "rdflib", specifier = ">=7.6.0" },
+    { name = "sssom", specifier = ">=0.4.17" },
+]
 
 [package.metadata.requires-dev]
 dev = [
