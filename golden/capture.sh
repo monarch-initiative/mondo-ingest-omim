@@ -5,7 +5,7 @@
 #   golden/capture.sh [OUT_DIR]          (default: golden/out)
 #
 # Environment:
-#   GOLDEN_REF   git ref holding the legacy pipeline        (default: main)
+#   GOLDEN_REF   git ref holding the legacy pipeline        (default: main before the rewrite)
 #   OMIM_DATA    directory of OMIM's licensed .txt downloads (default: omim-data)
 #   ODK_TAG      obolibrary/odkfull tag                      (default: v1.5.3, as in CI)
 #
@@ -19,7 +19,7 @@ set -eu
 cd "$(git rev-parse --show-toplevel)"
 
 out=${1:-golden/out}
-ref=${GOLDEN_REF:-main}
+ref=${GOLDEN_REF:-098e956}
 omim_data=${OMIM_DATA:-omim-data}
 image=obolibrary/odkfull:${ODK_TAG:-v1.5.3}
 inputs=golden/inputs

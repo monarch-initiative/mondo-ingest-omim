@@ -50,3 +50,4 @@ morbidmap-protected-added-with-header.tsv
 
 # Python
 .venv/
+/*.nt

@@ -1,19 +1,28 @@
-# The existing pipeline lives in legacy/ while it is being rewritten
-export PYTHONPATH := legacy
+# The pipeline is src/omim2obo. Its predecessor is kept in legacy/ for now
+export PYTHONPATH := src
 
-.PHONY: all help install test scrape get-pmids cleanup golden
+.PHONY: all fetch help install test test-legacy lint scrape get-pmids cleanup golden
 
+TSVS = mondo-omim-genes.robot.tsv disease-gene-relationships-qc.tsv \
+	mondo-omim-susceptibility-subset.robot.tsv review.tsv
 
 # MAIN COMMANDS / GOALS ------------------------------------------------------------------------------------------------
-all: omim.ttl omim.sssom.tsv omim.owl mondo-omim-genes.robot.tsv disease-gene-relationships-qc.tsv
+# all: Fetch the latest inputs, then build every release artefact from them
+all: fetch
+	$(MAKE) -B omim.owl omim.sssom.tsv
 
-# build: Create new omim.ttl
-# - OMIM datasets in data/ dependencies are downloaded by the script at runtime
-omim.ttl:
-	 make mondo_exactmatch_omim.sssom.tsv -B
-	 make data/hgnc/hgnc_complete_set.txt -B
-	 python3 -m omim2obo
-	 make cleanup
+# fetch: Download OMIM's files (needs the keys in .env), Mondo's mappings and HGNC, and refresh the
+# cache of PubMed references and UMLS / Orphanet mappings in data/
+fetch:
+	$(MAKE) -B mondo_exactmatch_omim.sssom.tsv mondo_exactmatch_omimps.sssom.tsv data/hgnc/hgnc_complete_set.txt
+	python3 -m omim2obo fetch
+
+# build: From files already on disk. Writes omim.nt and the TSVs together
+# BUILD_ARGS: e.g. "--omim omim-data --version 2026-01-01"; see python3 -m omim2obo build --help
+omim.nt:
+	python3 -m omim2obo build $(BUILD_ARGS)
+
+$(TSVS): omim.nt ;
 
 data/hgnc/hgnc_complete_set.txt:
 	@echo "Downloading HGNC complete set..."
@@ -59,25 +68,9 @@ mondo_exactmatch_omimps.sssom.tsv:
 omim.json: omim.owl
 	robot convert -i $< -o omim.json
 
-# Create OWL artefact, but adding HGNC links alongside the OMIM genes and
-# Mondo mappings alongside the OMIM diseases
-omim.owl: omim.ttl mondo_exactmatch_omim.sssom.owl mondo_exactmatch_omimps.sssom.owl
-	robot merge $(patsubst %, -i %, $^) \
-		query --update sparql/add_flipped_mondo_mappings.ru \
-		query --update sparql/hgnc_links.ru \
-		convert -f ofn -o $@
-
-# Create a TSV of relational information for gene and disease classes
-mondo-omim-genes.tsv: omim.owl
-	robot query -i $< --query sparql/mondo-omim-genes.sparql $@
-
-# Create a TSV of relational information for gene and disease classes, as a ROBOT template
-mondo-omim-genes.robot.tsv: mondo-omim-genes.tsv
-	python -m omim2obo.mondo_omim_genes_robot_tsv --inpath $< --outpath $@
-
-# Create a QC file of MIM-RO-MIM Gene-to-Disease associations in omim.ttl
-disease-gene-relationships-qc.tsv: omim.ttl
-	robot query -i $< --query sparql/disease-gene-relationships.sparql $@
+# Create OWL artefact: the graph in functional syntax
+omim.owl: omim.nt
+	robot convert -i $< -f ofn -o $@
 
 cleanup:
 	@rm -f omim.json
@@ -92,22 +85,30 @@ scrape:
     set -e ;\
 	arg1=$(y)$(yr)$(year)$(YYYY) ;\
 	arg2=$(m)$(mon)$(month)$(mm)$(MM) ;\
-	 python -m omim2obo.omim_code_scraper $$arg1/$$arg2 ;\
+	 PYTHONPATH=legacy python -m omim2obo.omim_code_scraper $$arg1/$$arg2 ;\
     }
 
 # Get list of OMIM codes and PMIDs in format of "OMIM PMID"
 get-pmids:
-	 python3 -m omim2obo.omim_code_pmid_query
+	 PYTHONPATH=legacy python3 -m omim2obo.omim_code_pmid_query
 
 # SETUP / INSTALLATION -------------------------------------------------------------------------------------------------
+# The ODK container already has everything the build imports. This is for working outside it.
 install:
-	pip install -r requirements-unlocked.txt --user --break-system-packages
+	uv sync
 
 # QA / TESTING ---------------------------------------------------------------------------------------------------------
 test:
-	 python3 -m unittest discover -v -s legacy/tests -t legacy
+	 python3 -m pytest tests
 
-# Capture golden outputs from the legacy pipeline on main. Needs Docker and OMIM's downloads
+test-legacy:
+	 PYTHONPATH=legacy python3 -m unittest discover -v -s legacy/tests -t legacy
+
+lint:
+	ruff format --check
+	ruff check
+
+# Capture golden outputs from the legacy pipeline as it was before the rewrite. Needs Docker and OMIM's downloads
 # OMIM_DATA: where OMIM's licensed .txt downloads are kept. They are never committed.
 OMIM_DATA ?= omim-data
 
@@ -121,14 +122,18 @@ help:
 	@echo "----------------------------------------"
 	@echo "all"
 	@echo "Creates all release artefacts.\n"
-	@echo "omim.ttl"
-	@echo "Creates main release artefact: omim.ttl\n"
+	@echo "fetch"
+	@echo "Downloads the inputs and refreshes the API cache.\n"
+	@echo "omim.owl"
+	@echo "Builds the main release artefact from files on disk.\n"
 	@echo "omim.sssom.tsv"
 	@echo "Creates an SSSOM TSV of OMIM terms.\n"
 	@echo "install"
-	@echo "Install's Python requirements.\n"
+	@echo "Installs Python requirements with uv, for working outside the ODK container.\n"
 	@echo "test"
 	@echo "Runs unit tests.\n"
+	@echo "lint"
+	@echo "Checks formatting and lint rules.\n"
 	@echo "scrape"
 	@echo "Does web scraping to get information about some OMIM terms.\n"
 	@echo "get-pmids"
