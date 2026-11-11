@@ -59,7 +59,8 @@ def detect_abbreviations(label: str, capitalization_threshold=0.75) -> list[str]
     # Compile regexp
     # todo: handle several warnings: {1} redundant, {1,} simplified to +
     acronyms_without_periods_compiler = re.compile('[A-Z]{1}[A-Z0-9]{1,}')
-    # todo: PyCharm flagged next 2 lines as invalid escape sequence, but this code seems to work? Should double check
+    # todo: PyCharm flagged next 2 lines as invalid escape sequence, but this code seems to work?
+    #  Should double check
     acronyms_with_periods_compiler = re.compile(r'[A-Z]{1}\.([A-Z0-9]\.){1,}')
     title_cased_abbrev_compiler = re.compile(r'[A-Z]{1}[a-zA-Z]{1,}\.')
 
@@ -86,7 +87,8 @@ def detect_abbreviations(label: str, capitalization_threshold=0.75) -> list[str]
 # todo: rename? It's doing more than cleaning; it's mutating
 def cleanup_title(
     title: str,
-    replacement_case_method: str = 'lower',  # 'upper', 'title', 'lower', 'capitalize' (=sentence case)
+    # 'upper', 'title', 'lower', 'capitalize' (=sentence case)
+    replacement_case_method: str = 'lower',
     conjunctions: list[str] = ['and', 'but', 'yet', 'for', 'nor', 'so'],
     little_preps: list[str] = ['at', 'by', 'in', 'of', 'on', 'to', 'up', 'as', 'it', 'or'],
     articles: list[str] = ['a', 'an', 'the'],
@@ -98,8 +100,8 @@ def cleanup_title(
 
     1. Converts roman numerals to arabic
     2. Makes the text adhere to the case of `replacement_case_method`, except for supplied
-    conjunctions, prepositions, and articles, which will always be lowercased. NOTE: The default for this is 'lower',
-    meaning that this operation by default does nothing.
+    conjunctions, prepositions, and articles, which will always be lowercased. NOTE: The default for
+    this is 'lower', meaning that this operation by default does nothing.
 
     Assumptions:
     1. All acronyms are capitalized
@@ -109,13 +111,14 @@ def cleanup_title(
        e.g. MITF-related melanoma and renal cell carcinoma predisposition syndrome
        e.g. ATP1A3-associated neurological disorder
     2. Make pattern for chromosomes
-       agonadism, 46,XY, with intellectual disability, short stature, retarded bone age, and multiple extragenital
-         malformations
+       agonadism, 46,XY, with intellectual disability, short stature, retarded bone age, and
+         multiple extragenital malformations
        Chromosome special formatting capitalization?
-       There seems to be special formatting for chromosome refs; they have a comma in the middle, but with no space
-       after the comma, though some places I saw on the internet contained a space.
-       e.g. "46,XY" in: agonadism, 46,XY, with intellectual disability, short stature, retarded bone age, and multiple
-         extragenital malformations
+       There seems to be special formatting for chromosome refs; they have a comma in the middle,
+       but with no space after the comma, though some places I saw on the internet contained a
+       space.
+       e.g. "46,XY" in: agonadism, 46,XY, with intellectual disability, short stature, retarded bone
+         age, and multiple extragenital malformations
     3. How to find acronym if it is capitalized but only includes char [A-Z], and
         every other char in the string is also capitalized? I don't see a way unless
         checking every word against an explicit dictionary of terms, though there are sure
@@ -168,18 +171,20 @@ def recapitalize_acronyms_in_title(
 ) -> str:
     """Re-capitalize acronyms / words based on information contained w/in original label
 
-    todo: If title has been used on cleanup_title() using a replacement_case_method other than the non-default 'lower',
-     then the .replace() operation will not work. To solve, this (a) capture the replacement_case_method used and
-     pass that here, or (b) duplicate the .replace() line and call it on alternative casing variations (.title() and
-     capitalize() (=sentence case)), (c) possibly just compare to word.lower() instead of 'word.
-    todo: (more important): It's probable that .split(' ') is not enough to cover all cases. Should also run the check
-     by splitting on other characters. E.g. consider the following potential cases: "TITLE (ACRONYM)",
-     "TITLE: ACRONYM1&ACRONYM2", "TITLE/ACRONYM" or "TITLE ACRONYM/ACRONYM", "TITLE {ACRONYM1,ACRONYM2}",
-     "TITLE[ACRONYM]",  "TITLE-ACRONYM", or less likely cases such as "TITLE_ACRONYM", "TITLE.ACRONYM". There are quite
-      a few different combos of special char usage that could theoretically arise. It might be possible for thisthat to
-      utilize the regular expressions in detect_abbreviations(), and substitute in the acronym in the place of the [A-Z]
-      part. It is also possible to improve detect_abbreviations() by considering some of thes eother possible example
-      cases above.
+    todo: If title has been used on cleanup_title() using a replacement_case_method other than the
+     non-default 'lower', then the .replace() operation will not work. To solve, this (a) capture
+     the replacement_case_method used and pass that here, or (b) duplicate the .replace() line and
+     call it on alternative casing variations (.title() and capitalize() (=sentence case)), (c)
+     possibly just compare to word.lower() instead of 'word.
+    todo: (more important): It's probable that .split(' ') is not enough to cover all cases. Should
+     also run the check by splitting on other characters. E.g. consider the following potential
+     cases: "TITLE (ACRONYM)", "TITLE: ACRONYM1&ACRONYM2", "TITLE/ACRONYM" or "TITLE
+     ACRONYM/ACRONYM", "TITLE {ACRONYM1,ACRONYM2}", "TITLE[ACRONYM]",  "TITLE-ACRONYM", or less
+     likely cases such as "TITLE_ACRONYM", "TITLE.ACRONYM". There are quite a few different combos
+     of special char usage that could theoretically arise. It might be possible for thisthat to
+     utilize the regular expressions in detect_abbreviations(), and substitute in the acronym in the
+     place of the [A-Z] part. It is also possible to improve detect_abbreviations() by considering
+     some of thes eother possible example cases above.
     """
     inferred_abbrevs: set[str] = set(detect_abbreviations(title, capitalization_threshold))
     abbrevs: set[str] = known_abbrevs.union(inferred_abbrevs)
@@ -232,7 +237,8 @@ def separate_former_titles_and_symbols(
 def clean_alt_and_included_titles(
     titles: list[str], symbols: list[str], word_replacements: dict[str, str]
 ) -> tuple[list[str], list[str]]:
-    """Remove ', INCLUDED' and ', FORMERLY' suffixes from titles/symbols & misc title reformatting"""
+    """Remove ', INCLUDED' and ', FORMERLY' suffixes from titles/symbols & misc title
+    reformatting"""
     # remove ', included' and ', formerly', if present
     titles2 = [remove_included_and_formerly_suffixes(x) for x in titles]
     symbols2 = [remove_included_and_formerly_suffixes(x) for x in symbols]
