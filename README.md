@@ -42,16 +42,27 @@ The code is in `src/omim2obo`.
 ## Curator configuration files
 **[protected-disease-gene.tsv](https://github.com/monarch-initiative/omim/blob/main/data/protected-disease-gene.tsv)**
 This file contains a list of disease-gene associations that should not be removed from the ontology, even if the 
-pipeine logic would otherwise determine that the association is not disease-defining. As of 2025/03/06, the only `type`
-of protection in the file is 'digenic'. For this protection type, there should be 2 rows for a given phenotype MIM. The 
-following fields are required for each row: `phenotype_mim`, `type`, `gene_mim`, `hgnc_id`)  should be filled out 
-in each row. `orcid` is optional but encouraged. `comment`, `mondo_id`, and `mondo_label` are all optional and not used 
-in any programmatic way.
+pipeline logic would otherwise determine that the association is not disease-defining. Each row pairs one gene
+with one Mondo class, for one OMIM phenotype.
+
+Required in every row, and checked when the build (and the tests) read the file:
+- `phenotype_mim` and `gene_mim`, as `OMIM:` followed by six digits
+- `hgnc_id`, as `HGNC:` followed by the number
+- `mondo_id`, as `MONDO:` followed by seven digits. This is the class the gene is added to in
+  `mondo-omim-genes.robot.tsv`, which need not be the class the OMIM entry itself maps to: for an entry with included
+  titles it may be the class for one of those.
+
+A row that leaves one of these blank or malformed stops the build, with a message naming the line.
+
+`orcid` is optional but encouraged. `type` records why the association is protected (`manually reviewed`, `digenic`,
+`included entry`, `provisional`, ...); it is free text and nothing in the pipeline reads it yet. `mondo_label` and
+`comment` are for readers only.
 
 **[exclusions-disease-gene.tsv](https://github.com/monarch-initiative/omim/blob/main/data/exclusions-disease-gene.tsv)**
 This file contains a list of disease-gene associations that should be removed from the ontology, even if the 
-pipeine logic would otherwise determine that the association is disease-defining. There is more information about this 
-in the section describing `review.tsv`. 
+pipeline logic would otherwise determine that the association is disease-defining. There is more information about this 
+in the section describing `review.tsv`. `omim_id` and `mondo_id` are required, in the same form as above; the exclusion
+applies to the whole OMIM entry, whichever Mondo class is named.
 
 **[known_capitalizations.tsv](https://github.com/monarch-initiative/omim/blob/main/data/known_capitalizations.tsv).**
 These are known replacements where we want to take matching text (lowercase or otherwise), and replace it with what is 
