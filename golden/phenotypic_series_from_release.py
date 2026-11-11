@@ -6,6 +6,10 @@
 The pipeline takes three things from that file: each series' number, its title, and its member MIMs.
 All three are in the released OWL, so the file can be rebuilt to give the same axioms. The third
 column of member rows, a phenotype label the pipeline never reads, is filled with a placeholder.
+
+A baseline captured with a rebuilt file is not independent of the pipeline that made the release:
+whatever that pipeline did with series and their members is taken as given. Use OMIM's own file if
+your account has it.
 """
 
 import re
