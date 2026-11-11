@@ -4,6 +4,7 @@ SSSOM files are read by the sssom package, which knows the format; what comes ou
 """
 
 import csv
+import io
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import TextIO
@@ -34,7 +35,7 @@ def parse_sssom(file: TextIO) -> list[Mapping]:
             subject_label=m.subject_label and str(m.subject_label),
             object_label=m.object_label and str(m.object_label),
         )
-        for m in parse_sssom_table(file).to_mappings()
+        for m in parse_sssom_table(io.StringIO(file.read())).to_mappings()
     ]
 
 

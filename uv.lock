@@ -866,9 +866,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "curies", specifier = ">=0.15.8" },
-    { name = "rdflib", specifier = ">=7.6.0" },
-    { name = "sssom", specifier = ">=0.4.17" },
+    { name = "curies", specifier = ">=0.7.10" },
+    { name = "rdflib", specifier = ">=7.1.1" },
+    { name = "sssom", specifier = ">=0.4.12" },
 ]
 
 [package.metadata.requires-dev]
