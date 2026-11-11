@@ -1,11 +1,10 @@
-"""Build the release artefacts from files already on disk.
+"""Build OMIM's release artefacts for Mondo.
 
-    python -m omim2obo --omim omim-data --mondo-mappings mondo_exactmatch_omim.sssom.tsv ...
-
-Writes omim.nt, for `robot convert` to turn into omim.owl, and the four TSVs.
+python -m omim2obo fetch    download OMIM's files and refresh the API cache, into data/
+python -m omim2obo build    write omim.nt (for `robot convert`) and the four TSVs
 """
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from datetime import date
 from pathlib import Path
 
@@ -23,9 +22,12 @@ from omim2obo.review import review_cases
 
 def main() -> None:
     parser = ArgumentParser(prog='omim2obo', description=__doc__.splitlines()[0])
-    parser.add_argument('--omim', type=Path, default='data', help="OMIM's .txt downloads")
-    parser.add_argument('--data', type=Path, default='data', help='curated files and caches')
-    parser.add_argument(
+    commands = parser.add_subparsers(dest='command', required=True)
+    commands.add_parser('fetch', help="download OMIM's files and refresh the API cache")
+    build = commands.add_parser('build', help='build from files already on disk')
+    build.add_argument('--omim', type=Path, default='data', help="OMIM's .txt downloads")
+    build.add_argument('--data', type=Path, default='data', help='curated files and caches')
+    build.add_argument(
         '--mondo-mappings',
         type=Path,
         nargs='+',
@@ -35,10 +37,19 @@ def main() -> None:
         ],
         help="Mondo's SSSOM mappings to OMIM entries and phenotypic series",
     )
-    parser.add_argument('--version', default=date.today().isoformat(), help='release date')
-    parser.add_argument('--out', type=Path, default='.', help='directory to write to')
+    build.add_argument('--version', default=date.today().isoformat(), help='release date')
+    build.add_argument('--out', type=Path, default='.', help='directory to write to')
     args = parser.parse_args()
 
+    if args.command == 'fetch':
+        from omim2obo.fetch import fetch  # reads .env on import
+
+        fetch()
+    else:
+        _build(args)
+
+
+def _build(args: Namespace) -> None:
     release = read_release(
         version=args.version, omim=args.omim, data=args.data, mondo_mappings=args.mondo_mappings
     )

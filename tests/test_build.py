@@ -48,7 +48,9 @@ def test_build(tmp_path, monkeypatch):
             path.write_text(text)
     arguments = '--omim omim --data data --mondo-mappings mondo.sssom.tsv --out out'
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(sys, 'argv', ['omim2obo', *arguments.split(), '--version', '2026-01-01'])
+    monkeypatch.setattr(
+        sys, 'argv', ['omim2obo', 'build', *arguments.split(), '--version', '2026-01-01']
+    )
 
     main()
 
