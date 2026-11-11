@@ -21,11 +21,11 @@ uses uv.
 - `uv run pytest` (or `make test` in the container) - Tests, all on synthetic fixtures
 - `uv run ruff format` and `uv run ruff check` - Formatter and linter; both are checked in CI
 - `make golden` - Rebuild the pre-rewrite pipeline's outputs into `golden/out/` for comparison
-- `make test-legacy`, `make scrape`, `make get-pmids` - Run against `legacy/`
 
 ## Architecture
 
-The code is in `src/omim2obo`. `legacy/` holds the pipeline it replaced and is to be deleted.
+The code is in `src/omim2obo`. It replaced a pipeline that built one large RDF graph and queried
+it back out with SPARQL; "legacy" in comments means that pipeline (last at commit `098e956`).
 
 Records in, records out, pure functions between them; OWL is one rendering at the end.
 
@@ -49,7 +49,7 @@ Also: `titles.py` cleans OMIM's ALL CAPS titles, `genes.py` resolves gene entrie
 `config.py` talk to OMIM.
 
 Code marked `QUIRK` reproduces legacy behaviour that looks wrong but is needed for output parity; do
-not fix one in passing. Files carried over from legacy keep their `git blame` history
+not fix one in passing. Files carried over from it keep their `git blame` history
 (`.git-blame-ignore-revs` lists the reformatting commits).
 
 ### Curator Override System

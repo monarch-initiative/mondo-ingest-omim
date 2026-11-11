@@ -1,7 +1,6 @@
-# The pipeline is src/omim2obo. Its predecessor is kept in legacy/ for now
 export PYTHONPATH := src
 
-.PHONY: all fetch help install test test-legacy lint scrape get-pmids cleanup golden
+.PHONY: all fetch help install test lint cleanup golden
 
 TSVS = mondo-omim-genes.robot.tsv disease-gene-relationships-qc.tsv \
 	mondo-omim-susceptibility-subset.robot.tsv review.tsv
@@ -60,9 +59,6 @@ mondo_exactmatch_omim.sssom.tsv:
 mondo_exactmatch_omimps.sssom.tsv:
 	wget "http://purl.obolibrary.org/obo/mondo/mappings/mondo_exactmatch_omimps.sssom.tsv" -O $@
 
-%.sssom.owl: %.sssom.tsv
-	sssom convert $< -O owl -o $@
-
 # More commands / goals  -----------------------------------------------------------------------------------------------
 # Create mapping artefact(s)
 omim.json: omim.owl
@@ -75,23 +71,6 @@ omim.owl: omim.nt
 cleanup:
 	@rm -f omim.json
 
-# scrape: argument should be in form of YYYY/MM or YYYY/mm
-# @param y: The year. Pass as <FLAG>=<YYYY>, where <FLAG> can be y, yr, year, or YYYY.
-# @param m: The month. Pass as <FLAG>=<MM>, where <FLAG> can be m, mon, month, mm, or MM.
-# @examples
-# -"make scrape y=2021 m=5
-scrape:
-	@{ \
-    set -e ;\
-	arg1=$(y)$(yr)$(year)$(YYYY) ;\
-	arg2=$(m)$(mon)$(month)$(mm)$(MM) ;\
-	 PYTHONPATH=legacy python -m omim2obo.omim_code_scraper $$arg1/$$arg2 ;\
-    }
-
-# Get list of OMIM codes and PMIDs in format of "OMIM PMID"
-get-pmids:
-	 PYTHONPATH=legacy python3 -m omim2obo.omim_code_pmid_query
-
 # SETUP / INSTALLATION -------------------------------------------------------------------------------------------------
 # The ODK container already has everything the build imports. This is for working outside it.
 install:
@@ -100,9 +79,6 @@ install:
 # QA / TESTING ---------------------------------------------------------------------------------------------------------
 test:
 	 python3 -m pytest tests
-
-test-legacy:
-	 PYTHONPATH=legacy python3 -m unittest discover -v -s legacy/tests -t legacy
 
 lint:
 	ruff format --check
@@ -134,7 +110,3 @@ help:
 	@echo "Runs unit tests.\n"
 	@echo "lint"
 	@echo "Checks formatting and lint rules.\n"
-	@echo "scrape"
-	@echo "Does web scraping to get information about some OMIM terms.\n"
-	@echo "get-pmids"
-	@echo "Gets PMIDs for all terms.\n"

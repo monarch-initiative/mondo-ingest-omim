@@ -37,7 +37,7 @@ The two halves can be run separately:
 - `sh run.sh make -B omim.owl`: only the build, from the files already on disk
   (`python -m omim2obo build`, then `robot convert`). Use this if you are offline.
 
-The code is in `src/omim2obo`. The pipeline it replaces is kept in `legacy/` for the time being.
+The code is in `src/omim2obo`.
 
 ## Curator configuration files
 **[protected-disease-gene.tsv](https://github.com/monarch-initiative/omim/blob/main/data/protected-disease-gene.tsv)**
@@ -60,60 +60,6 @@ string. However, it is a bit superfluous, as it will ensure that any capitalizat
 `cap_name` will get re-capitalized to what is in `cap_name`. E.g. if `cap_name` is "Prune Belly Syndrome", then "prune 
 belly syndrome", or "Prune belly syndrome" would both be replaced with "Prune Belly Syndrome". This logic operates only 
 on OMIM titles (standard title, as well as alt, formerly, and included titles).
-
-## Additional tools
-<details><summary>Details</summary>
-<p>
-
-### Get PMIDs used for OMIM codes from `omim.ttl`
-Command: `sh run.sh make get-pmids`
-
-### OMIM Code Web Scraper
-Currently, the only feature is `get_codes_by_yyyy_mm`, which returns a list of OMIM codes and their prefixes from 
-https://omim.org/statistics/update.
-
-Note that this utility no longer has an identified use case. This used to be our way of determining which MIMs might 
-have out of date PMID references or Orphanet/UMLS mappings, but we've since implemented a way to get these updates 
-through the OMIM entry API. 
-
-#### Usage: Command Line Interface
-##### Syntax
-1. `make scrape y=<YEAR> m=<MONTH>`
-2. `make scrape y=<YEAR> m=<MONTH> > <path/to/outputFile>`
-
-##### Usage
-1. Get codes for May 2021, printed to terminal: `make scrape y=2021 m=5`
-2. Get codes for May 2021 and output to a file "myfile.txt": `make scrape y=2021 m=5 > myfile.txt`
-
-##### Examples
-Command:  
-`make scrape y=2021 m=5`
-
-Response:
-```py
-[('#', '619340'),
- ('#', '619355'),
- ('*', '619357'),
- ('*', '619358'),
- ('*', '619359'),
- ('#', '619325'),
- ('#', '619328'),
- ('*', '100850'),
- ...
- ('#', '613102')]
- ```
-
-### Usage: Python API
-Using `get_codes_by_yyyy_mm()` will return a list of tuples.
-
-```py
-from omim2obo.omim_code_scraper import get_codes_by_yyyy_mm
-
-code_tuples = get_codes_by_yyyy_mm('2021/05')
-```
-
-</p>
-</details> 
 
 ## Release files
 - `omim.owl`: OMIM ontologized
