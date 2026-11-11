@@ -16,12 +16,11 @@ fetch:
 	$(MAKE) -B mondo_exactmatch_omim.sssom.tsv mondo_exactmatch_omimps.sssom.tsv data/hgnc/hgnc_complete_set.txt
 	python3 -m omim2obo fetch
 
-# build: From files already on disk. Writes omim.nt and the TSVs together
+# build: From files already on disk. One run writes omim.nt and the TSVs together (a grouped target,
+# so GNU make 4.3 or later)
 # BUILD_ARGS: e.g. "--omim omim-data --version 2026-01-01"; see python3 -m omim2obo build --help
-omim.nt:
+omim.nt $(TSVS) &:
 	python3 -m omim2obo build $(BUILD_ARGS)
-
-$(TSVS): omim.nt ;
 
 data/hgnc/hgnc_complete_set.txt:
 	@echo "Downloading HGNC complete set..."
