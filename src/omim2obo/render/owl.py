@@ -1,5 +1,6 @@
 """omim.owl, as an RDF graph for `robot convert` to turn into functional syntax."""
 
+from collections import defaultdict
 from collections.abc import Iterable
 
 from rdflib import OWL, RDF, RDFS, SKOS, BNode, Graph, Literal, Namespace, URIRef
@@ -10,16 +11,16 @@ from omim2obo.entry_prefix import BIOLINK_CATEGORY, EntryPrefix
 from omim2obo.parse.omim import (
     MappingKey,
     Mim2GeneEntryType,
-    Mim2GeneRow,
     MorbidmapRow,
     PhenotypicSeries,
     RemovedRow,
 )
-from omim2obo.parse.reference import Mapping, PubmedReference
+from omim2obo.parse.reference import Mapping
 from omim2obo.predicates import MORBIDMAP_PHENOTYPE_MAPPING_KEY_MEANINGS, Predicate
+from omim2obo.prefixes import OBO, expand
+from omim2obo.release import Release
 from omim2obo.titles import EntryTitles
 
-OBO = 'http://purl.obolibrary.org/obo/'
 BIOLINK = Namespace('https://w3id.org/biolink/vocab/')
 OBOINOWL = Namespace('http://www.geneontology.org/formats/oboInOwl#')
 SSSOM = Namespace('https://w3id.org/sssom/')
@@ -34,76 +35,45 @@ HAS_PHENOTYPE = URIRef(OBO + 'RO_0002200')
 IS_SUBSEQUENCE_OF = URIRef(OBO + 'RO_0002525')
 CAUSAL_GERMLINE_MUTATION_IN = URIRef(OBO + 'RO_0004013')
 
-IRI_PREFIXES = {
-    'OMIM': 'https://omim.org/entry/',
-    'OMIMPS': 'https://omim.org/phenotypicSeries/PS',
-    'MONDO': OBO + 'MONDO_',
-    'RO': OBO + 'RO_',
-    'CHR': OBO + 'CHR_',
-    'HGNC': 'http://identifiers.org/hgnc/',
-    'HGNC.symbol': 'https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/',
-    'NCBIGene': 'https://www.ncbi.nlm.nih.gov/gene/',
-    'PMID': 'http://www.ncbi.nlm.nih.gov/pubmed/',
-    'UMLS': 'http://linkedlifedata.com/resource/umls/id/',
-    'Orphanet': 'http://www.orpha.net/ORDO/Orphanet_',
-    'skos': str(SKOS),
-    'semapv': 'https://w3id.org/semapv/vocab/',
-}
-
 type Annotations = Iterable[tuple[URIRef, Node]]
 
 
 def iri(curie: str) -> URIRef:
-    prefix, local_id = curie.split(':', 1)
-    return URIRef(IRI_PREFIXES[prefix] + local_id)
+    return URIRef(expand(curie))
 
 
 def omim(mim: str) -> URIRef:
     return iri(f'OMIM:{mim}')
 
 
-def render_owl(
-    *,
-    version: str,
-    entries: Iterable[EntryTitles],
-    removed: Iterable[RemovedRow],
-    mim2gene: Iterable[Mim2GeneRow],
-    symbols: dict[str, str],
-    hgnc_mappings: Iterable[Mapping],
-    series: Iterable[PhenotypicSeries],
-    morbidmap: Iterable[MorbidmapRow],
-    associations: Iterable[Association],
-    references: Iterable[PubmedReference],
-    entry_mappings: Iterable[Mapping],
-    mondo_mappings: Iterable[Mapping],
-) -> Graph:
-    """`version` is the release date, as YYYY-MM-DD."""
+def render_owl(release: Release) -> Graph:
     graph = Graph()
-    _add_ontology(graph, version)
-    for entry in entries:
+    _add_ontology(graph, release.version)
+    for entry in release.entries:
         _add_entry(graph, entry)
-    for row in removed:
+    for row in release.removed:
         _add_removed(graph, row)
-    _add_gene_identifiers(graph, mim2gene, symbols, hgnc_mappings)
-    for a_series in series:
-        _add_series(graph, a_series)
-    _add_cyto_locations(graph, morbidmap)
-    associations = list(associations)
+    _add_gene_identifiers(graph, release)
+    for series in release.series:
+        _add_series(graph, series)
+    _add_cyto_locations(graph, release.morbidmap)
+
     # QUIRK: where a pair is protected by more than one row, only the last row's curator is named.
     last_curator = {
         (a.phenotype_mim, a.gene_mim): a.provenance.orcid
-        for a in associations
+        for a in release.associations
         if isinstance(a.provenance, CuratorProtected)
     }
-    for association in associations:
+    for association in release.associations:
         _add_association(graph, association, last_curator)
-    for reference in references:
+    _add_hgnc_links(graph, release)
+
+    for reference in release.references:
         graph.add((omim(reference.mim), MENTIONS, iri(f'PMID:{reference.pmid}')))
-    for mapping in entry_mappings:
+    for mapping in release.entry_mappings:
         graph.add((iri(mapping.subject_id), iri(mapping.predicate_id), iri(mapping.object_id)))
-    for mapping in mondo_mappings:
+    for mapping in release.mondo_mappings:
         _add_mondo_mapping(graph, mapping)
-    _add_hgnc_links(graph)
     return graph
 
 
@@ -180,13 +150,8 @@ def _add_removed(graph: Graph, row: RemovedRow) -> None:
                 graph.add((uri, OBOINOWL.consider, omim(replacement)))
 
 
-def _add_gene_identifiers(
-    graph: Graph,
-    mim2gene: Iterable[Mim2GeneRow],
-    symbols: dict[str, str],
-    hgnc_mappings: Iterable[Mapping],
-) -> None:
-    for row in mim2gene:
+def _add_gene_identifiers(graph: Graph, release: Release) -> None:
+    for row in release.mim2gene:
         if not row.entrez_id:
             continue
         ncbi_gene = iri(f'NCBIGene:{row.entrez_id}')
@@ -197,9 +162,9 @@ def _add_gene_identifiers(
             Mim2GeneEntryType.PREDOMINANTLY_PHENOTYPES,
         ):
             _add_restriction(graph, ncbi_gene, HAS_PHENOTYPE, omim(row.mim))
-    for mim, symbol in symbols.items():
+    for mim, symbol in release.symbols:
         graph.add((omim(mim), SKOS.exactMatch, iri(f'HGNC.symbol:{symbol}')))
-    for mapping in hgnc_mappings:
+    for mapping in release.hgnc_mappings:
         graph.add((iri(mapping.subject_id), SKOS.exactMatch, iri(mapping.object_id)))
 
 
@@ -276,19 +241,22 @@ def _add_mondo_mapping(graph: Graph, mapping: Mapping) -> None:
     graph.add((object_, predicate, subject))
 
 
-def _add_hgnc_links(graph: Graph) -> None:
-    """Wherever a class has its basis in an OMIM gene, say so of the HGNC gene as well."""
-    germline_mutation = iri(Predicate.GERMLINE_MUTATION.value)
-    links = set()
-    for restriction in graph.subjects(OWL.onProperty, germline_mutation):
-        gene = graph.value(restriction, OWL.someValuesFrom)
-        for subject in graph.subjects(RDFS.subClassOf, restriction):
-            for match in graph.objects(gene, SKOS.exactMatch):
-                if match.startswith(IRI_PREFIXES['HGNC']):
-                    links.add((subject, match))
-    for subject, hgnc_gene in links:
-        graph.add((hgnc_gene, RDF.type, OWL.Class))
-        _add_restriction(graph, subject, germline_mutation, hgnc_gene)
+def _add_hgnc_links(graph: Graph, release: Release) -> None:
+    """Wherever a phenotype has its basis in an OMIM gene, say so of the HGNC gene as well."""
+    hgnc_ids = defaultdict(set)
+    for mapping in release.hgnc_mappings:
+        hgnc_ids[mapping.subject_id.removeprefix('OMIM:')].add(mapping.object_id)
+    germline = [a for a in release.associations if a.predicate is Predicate.GERMLINE_MUTATION]
+    for association in germline:
+        if isinstance(association.provenance, CuratorProtected):
+            hgnc_ids[association.gene_mim].add(association.provenance.hgnc_id)
+
+    links = {(a.phenotype_mim, hgnc_id) for a in germline for hgnc_id in hgnc_ids[a.gene_mim]}
+    for phenotype_mim, hgnc_id in links:
+        graph.add((iri(hgnc_id), RDF.type, OWL.Class))
+        _add_restriction(
+            graph, omim(phenotype_mim), iri(Predicate.GERMLINE_MUTATION.value), iri(hgnc_id)
+        )
 
 
 def _add_restriction(

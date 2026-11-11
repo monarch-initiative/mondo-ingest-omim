@@ -10,6 +10,7 @@ from omim2obo.entry_prefix import EntryPrefix
 from omim2obo.parse.omim import MappingKey, MorbidmapRow, RemovedRow
 from omim2obo.parse.reference import Mapping
 from omim2obo.predicates import Predicate
+from omim2obo.release import Release
 from omim2obo.render.owl import (
     BIOLINK,
     GENE,
@@ -30,22 +31,7 @@ KEY_3 = OmimMorbidmap(MappingKey.MOLECULAR_BASIS_KNOWN, 'Wobbly knee syndrome')
 
 
 def render(**inputs) -> Graph:
-    empty = dict.fromkeys(
-        (
-            'entries',
-            'removed',
-            'mim2gene',
-            'hgnc_mappings',
-            'series',
-            'morbidmap',
-            'associations',
-            'references',
-            'entry_mappings',
-            'mondo_mappings',
-        ),
-        (),
-    )
-    return render_owl(**{'version': '2026-01-01', 'symbols': {}, **empty, **inputs})
+    return render_owl(Release(**{'version': '2026-01-01', **inputs}))
 
 
 def restrictions(graph: Graph) -> set[tuple]:
