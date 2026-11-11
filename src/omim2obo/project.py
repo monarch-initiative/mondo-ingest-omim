@@ -25,25 +25,28 @@ def project(
     mondo_mappings: Iterable[Mapping],
     hgnc_mappings: Iterable[Mapping],
 ) -> set[MondoGeneRow]:
-    associations = list(associations)
     mondo_ids = _objects_by_mim(_flipped(mondo_mappings), 'MONDO:')
     hgnc_ids = _objects_by_mim(hgnc_mappings, 'HGNC:')
 
-    # QUIRK (https://github.com/monarch-initiative/omim/pull/332): a protected row's Mondo class
-    # and HGNC gene are pooled with everything else known about its OMIM entries, so every gene of
-    # the phenotype reaches every one of its classes, whichever the curator paired.
+    rows = set()
     for association in associations:
-        if isinstance(association.provenance, CuratorProtected):
-            mondo_ids[association.phenotype_mim].add(association.provenance.mondo_id)
-            hgnc_ids[association.gene_mim].add(association.provenance.hgnc_id)
-
-    return {
-        MondoGeneRow(mondo_id, hgnc_id, association.phenotype_mim, association.gene_mim)
-        for association in associations
-        if association.predicate is Predicate.GERMLINE_MUTATION
-        for mondo_id in mondo_ids[association.phenotype_mim]
-        for hgnc_id in hgnc_ids[association.gene_mim]
-    }
+        if association.predicate is not Predicate.GERMLINE_MUTATION:
+            continue
+        phenotype_mim, gene_mim, provenance = (
+            association.phenotype_mim,
+            association.gene_mim,
+            association.provenance,
+        )
+        # A curator pairs one class with one gene. That is as well as, not instead of, whatever
+        # the entry and its gene are mapped to.
+        if isinstance(provenance, CuratorProtected):
+            rows.add(MondoGeneRow(provenance.mondo_id, provenance.hgnc_id, phenotype_mim, gene_mim))
+        rows |= {
+            MondoGeneRow(mondo_id, hgnc_id, phenotype_mim, gene_mim)
+            for mondo_id in mondo_ids[phenotype_mim]
+            for hgnc_id in hgnc_ids[gene_mim]
+        }
+    return rows
 
 
 def susceptibility_subset(

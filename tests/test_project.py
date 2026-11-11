@@ -50,18 +50,25 @@ def test_protected_row_supplies_its_own_class_and_gene():
     }
 
 
-def test_QUIRK_protected_class_receives_every_gene_of_the_phenotype():
-    """#332, modelled on OMIM:231200 (Bernard-Soulier): each included-entry class was paired with
-    one gene, and gets them all."""
+def test_protected_class_receives_only_the_gene_it_was_paired_with():
+    """#332, modelled on OMIM:231200 (Bernard-Soulier): three included-entry classes, one gene
+    each."""
     associations = [
         germline('900100', protected('MONDO:9900002', 'HGNC:99901')),
         germline('900101', protected('MONDO:9900003', 'HGNC:99902')),
     ]
     assert {(row.mondo_id, row.hgnc_id) for row in project(associations, [], [])} == {
         ('MONDO:9900002', 'HGNC:99901'),
-        ('MONDO:9900002', 'HGNC:99902'),
-        ('MONDO:9900003', 'HGNC:99901'),
         ('MONDO:9900003', 'HGNC:99902'),
+    }
+
+
+def test_protected_association_still_reaches_the_mapped_class():
+    """Modelled on OMIM:137215 (CDH1): the entry's own class keeps the gene."""
+    association = germline(provenance=protected('MONDO:9900002', 'HGNC:99901'))
+    assert {row.mondo_id for row in project([association], MONDO, HGNC)} == {
+        'MONDO:9900001',
+        'MONDO:9900002',
     }
 
 
