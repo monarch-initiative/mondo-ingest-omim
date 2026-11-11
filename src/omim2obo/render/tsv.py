@@ -9,6 +9,7 @@ from omim2obo.entry_prefix import BIOLINK_CATEGORY
 from omim2obo.predicates import Predicate
 from omim2obo.prefixes import expand
 from omim2obo.project import MondoGeneRow
+from omim2obo.review import REVIEW_CASE_NAMES, ReviewCase
 from omim2obo.titles import EntryTitles
 
 CAUSAL_GERMLINE_MUTATION_IN = 'RO:0004013'
@@ -112,6 +113,17 @@ def render_qc(associations: Iterable[Association], entries: Iterable[EntryTitles
         ) in rows
     ]
     return ''.join('\t'.join(line) + '\n' for line in lines)
+
+
+def render_review(cases: Iterable[ReviewCase]) -> str:
+    """review.tsv"""
+    return _tsv(
+        [
+            ('classCode', 'classShortName', 'value'),
+            *((case.code, REVIEW_CASE_NAMES[case.code], case.value) for case in cases),
+        ],
+        lineterminator='\n',
+    )
 
 
 def _quoted(value: str) -> str:
