@@ -33,9 +33,16 @@ references and UMLS / Orphanet mappings in `data/`, and writes new release artef
 directory.
 
 The two halves can be run separately:
-- `sh run.sh make fetch`: only the downloads and cache refresh (`python -m omim2obo fetch`).
-- `sh run.sh make -B omim.owl`: only the build, from the files already on disk
-  (`python -m omim2obo build`, then `robot convert`). Use this if you are offline.
+- `sh run.sh make omim.owl`: only the build. It is redone when an input has changed, and
+  a download that is missing is fetched first. `python -m omim2obo build --help` lists every file it
+  reads.
+- `sh run.sh make fetch`: only the downloads. Make cannot tell when a file on someone else's server
+  has changed, so each source has a target that always fetches: `fetch-omim`, `fetch-mondo`,
+  `fetch-hgnc` and `fetch-cache` (PubMed references and UMLS / Orphanet mappings from OMIM's API).
+  `fetch` runs all four. HGNC and the API cache are committed, so expect a diff afterwards.
+
+`make clean` removes what the build wrote and leaves the downloads. The Makefile needs GNU make 4.3
+or later.
 
 The code is in `src/omim2obo`.
 

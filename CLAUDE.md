@@ -14,10 +14,12 @@ The release build runs in the ODK container: prefix `make` with `sh run.sh`. Dev
 uses uv.
 
 - `make all` - Fetch the latest inputs, then build every release artefact
-- `make fetch` / `python -m omim2obo fetch` - Download OMIM's files (keys in `.env`), Mondo's mappings
-  and HGNC; refresh the PubMed/UMLS/Orphanet cache in `data/`
-- `make -B omim.owl` - Build from files on disk: `python -m omim2obo build` writes `omim.nt` and the
-  TSVs, `robot convert` turns `omim.nt` into `omim.owl`
+- `make omim.owl` - Build: `python -m omim2obo build` writes `omim.nt` and the TSVs, `robot convert`
+  turns `omim.nt` into `omim.owl`. Rebuilt when an input changes; missing downloads are
+  fetched. `python -m omim2obo build --help` lists every input file
+- `make fetch` - Fetch everything again: `fetch-omim` (keys in `.env`), `fetch-mondo`, `fetch-hgnc`,
+  `fetch-cache` (the PubMed/UMLS/Orphanet cache in `data/`)
+- `make clean` - Remove what the build wrote
 - `uv run pytest` (or `make test` in the container) - Tests, all on synthetic fixtures
 - `uv run ruff format` and `uv run ruff check` - Formatter and linter; both are checked in CI
 - `make golden` - Rebuild the pre-rewrite pipeline's outputs into `golden/out/` for comparison
@@ -69,7 +71,9 @@ Three key TSV files allow manual curation interventions:
 - `.env` (from `.env.example`): OMIM download and API keys. Never read or print it.
 - `pyproject.toml`, `uv.lock`: dependencies, pytest and ruff settings. Dependency floors match what
   the ODK container ships, because the release build uses its system Python.
-- `Makefile`: build targets
+- `Makefile`: build targets. GNU make 4.3+. Every target lists its real prerequisites: do not reach for
+  `-B`. `.PHONY:` goes directly above each phony target
+- The command line is `click` (not argparse; typer is not in the ODK container)
 - `data/metadata.sssom.yml`: metadata for `omim.sssom.tsv`, still built by `robot` + `sssom parse`
 
 ## Notes
