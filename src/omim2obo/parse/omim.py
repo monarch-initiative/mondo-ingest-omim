@@ -195,19 +195,22 @@ def parse_phenotypic_series(lines: Iterable[str]) -> list[PhenotypicSeries]:
     PS900001    Wobbly knee syndrome
     PS900001    900001    Wobbly knee syndrome 1
     PS900001    900002    Wobbly knee syndrome 2
+
+    An entry is listed once for each of its phenotypes in the series, so it can repeat.
     """
     titles: dict[str, str] = {}
-    members: dict[str, list[str]] = {}
+    members: dict[str, dict[str, None]] = {}
     for line in data_lines(lines):
         match line.split('\t'):
             case [number, title]:
                 titles[number] = title
-                members[number] = []
             case [number, mim, _phenotype]:
-                members[number].append(mim)
+                members.setdefault(number, {})[mim] = None
             case _:
                 raise ValueError(f'phenotypicSeries.txt: expected two or three fields in {line!r}')
+    if untitled := members.keys() - titles.keys():
+        raise ValueError(f'phenotypicSeries.txt: members but no title for {sorted(untitled)}')
     return [
-        PhenotypicSeries(number=number, title=title, members=tuple(members[number]))
+        PhenotypicSeries(number=number, title=title, members=tuple(members.get(number, ())))
         for number, title in titles.items()
     ]

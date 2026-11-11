@@ -148,3 +148,35 @@ def test_phenotypic_series_gathers_its_members():
         ),
         PhenotypicSeries(number='PS900010', title='Knee wobble, isolated', members=('900010',)),
     ]
+
+
+def test_phenotypic_series_member_is_kept_once_however_often_it_is_listed():
+    """As in the real file, where an entry appears once for each of its phenotypes in the series."""
+    [series] = parse_phenotypic_series(
+        [
+            'PS900001\tWobbly knee syndrome\n',
+            'PS900001\t900001\tWobbly knee syndrome 1\n',
+            'PS900001\t900001\t{Wobbly knee, susceptibility to}\n',
+        ]
+    )
+    assert series.members == ('900001',)
+
+
+def test_phenotypic_series_member_may_come_before_its_title():
+    [series] = parse_phenotypic_series(
+        ['PS900001\t900001\tWobbly knee syndrome 1\n', 'PS900001\tWobbly knee syndrome\n']
+    )
+    assert series.members == ('900001',)
+
+
+@pytest.mark.parametrize(
+    'lines',
+    [
+        ['PS900001\t900001\tWobbly knee syndrome 1\n'],
+        ['PS900001\t900001\tWobbly knee syndrome 1\textra\n'],
+    ],
+    ids=['no title', 'four fields'],
+)
+def test_phenotypic_series_malformed_file_is_an_error(lines):
+    with pytest.raises(ValueError, match='phenotypicSeries.txt'):
+        parse_phenotypic_series(lines)
