@@ -58,7 +58,7 @@ def susceptibility_subset(
     return {
         (mondo_id, row.phenotype_mim)
         for row in morbidmap
-        if row.phenotype_mim and row.phenotype_label.startswith('{')
+        if row.phenotype_mim and row.phenotype_label.lstrip().startswith('{')
         for mondo_id in mondo_ids[row.phenotype_mim]
     }
 
