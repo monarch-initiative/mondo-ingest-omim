@@ -243,15 +243,20 @@ def _add_mondo_mapping(graph: Graph, mapping: Mapping) -> None:
 
 def _add_hgnc_links(graph: Graph, release: Release) -> None:
     """Wherever a phenotype has its basis in an OMIM gene, say so of the HGNC gene as well."""
-    hgnc_ids = defaultdict(set)
+    mapped = defaultdict(set)
     for mapping in release.hgnc_mappings:
-        hgnc_ids[mapping.subject_id.removeprefix('OMIM:')].add(mapping.object_id)
-    germline = [a for a in release.associations if a.predicate is Predicate.GERMLINE_MUTATION]
-    for association in germline:
-        if isinstance(association.provenance, CuratorProtected):
-            hgnc_ids[association.gene_mim].add(association.provenance.hgnc_id)
+        mapped[mapping.subject_id.removeprefix('OMIM:')].add(mapping.object_id)
 
-    links = {(a.phenotype_mim, hgnc_id) for a in germline for hgnc_id in hgnc_ids[a.gene_mim]}
+    links = set()
+    for association in release.associations:
+        if association.predicate is not Predicate.GERMLINE_MUTATION:
+            continue
+        hgnc_ids = set(mapped[association.gene_mim])
+        # A protected row names its gene's HGNC id itself. It counts for that row's phenotype only.
+        if isinstance(association.provenance, CuratorProtected):
+            hgnc_ids.add(association.provenance.hgnc_id)
+        links |= {(association.phenotype_mim, hgnc_id) for hgnc_id in hgnc_ids}
+
     for phenotype_mim, hgnc_id in links:
         graph.add((iri(hgnc_id), RDF.type, OWL.Class))
         _add_restriction(

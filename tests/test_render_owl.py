@@ -183,6 +183,18 @@ def test_basis_in_an_omim_gene_is_also_stated_of_its_hgnc_gene():
     assert (KNEE, iri('RO:0004003'), iri('HGNC:99901'), None, None) in restrictions(graph)
 
 
+def test_protected_hgnc_id_is_linked_only_to_the_phenotype_it_was_given_for():
+    other = Association(
+        phenotype_mim='900002',
+        gene_mim='900100',
+        predicate=Predicate.GERMLINE_MUTATION,
+        provenance=KEY_3,
+    )
+    graph = render(associations=[association(protected()), other])
+    links = {s for s, _, filler, _, _ in restrictions(graph) if filler == iri('HGNC:99901')}
+    assert links == {KNEE}
+
+
 def test_mondo_mapping_is_stated_both_ways_round():
     mapping = Mapping(
         subject_id='MONDO:9900001',
