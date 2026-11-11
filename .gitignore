@@ -7,7 +7,6 @@ __pycache__/
 .env
 
 # Specialized
-.ipynb_checkpoints/omim-checkpoint.ipynb
 .git.bfg-report/
 *ignore/
 analyses/**/*.ipynb_checkpoints
