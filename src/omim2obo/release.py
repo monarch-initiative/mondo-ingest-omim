@@ -1,6 +1,5 @@
 """Everything one release is rendered from."""
 
-from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -53,31 +52,45 @@ class Release:
     mondo_mappings: tuple[Mapping, ...] = ()
 
 
-def read_release(
-    *, version: str, omim: Path, data: Path, mondo_mappings: Iterable[Path]
-) -> Release:
-    """`omim` holds OMIM's downloads; `data` this repository's curated files and caches."""
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Inputs:
+    """Every file a build reads."""
 
+    mim_titles: Path
+    morbidmap: Path
+    mim2gene: Path
+    genemap2: Path
+    phenotypic_series: Path
+    protected: Path
+    exclusions: Path
+    known_capitalizations: Path
+    hgnc: Path
+    pubmed_refs: Path
+    entry_mappings: Path
+    mondo_mappings: tuple[Path, ...]
+
+
+def read_release(version: str, inputs: Inputs) -> Release:
     def lines(path: Path) -> list[str]:
         return path.read_text().splitlines()
 
-    titles = parse_mim_titles(lines(omim / 'mimTitles.txt'))
-    capitalizations = parse_known_capitalizations(lines(data / 'known_capitalizations.tsv'))
-    mim2gene = parse_mim2gene(lines(omim / 'mim2gene.txt'))
-    symbols = approved_symbols(mim2gene, parse_genemap2(lines(omim / 'genemap2.txt')))
-    hgnc = hgnc_mappings(symbols, parse_hgnc(lines(data / 'hgnc/hgnc_complete_set.txt')))
-    morbidmap = parse_morbidmap(lines(omim / 'morbidmap.txt'))
+    titles = parse_mim_titles(lines(inputs.mim_titles))
+    capitalizations = parse_known_capitalizations(lines(inputs.known_capitalizations))
+    mim2gene = parse_mim2gene(lines(inputs.mim2gene))
+    symbols = approved_symbols(mim2gene, parse_genemap2(lines(inputs.genemap2)))
+    hgnc = hgnc_mappings(symbols, parse_hgnc(lines(inputs.hgnc)))
+    morbidmap = parse_morbidmap(lines(inputs.morbidmap))
     associations = classify(
         morbidmap,
-        parse_protected(lines(data / 'protected-disease-gene.tsv')),
-        parse_exclusions(lines(data / 'exclusions-disease-gene.tsv')),
+        parse_protected(lines(inputs.protected)),
+        parse_exclusions(lines(inputs.exclusions)),
     )
     mondo = []
-    for path in mondo_mappings:
+    for path in inputs.mondo_mappings:
         with path.open() as file:
             mondo += parse_sssom(file)
 
-    release = Release(
+    return Release(
         version=version,
         entries=tuple(
             entry_titles(row, capitalizations) for row in titles if isinstance(row, TitleRow)
@@ -86,11 +99,10 @@ def read_release(
         mim2gene=tuple(mim2gene),
         symbols=tuple(symbols.items()),
         hgnc_mappings=tuple(hgnc),
-        series=tuple(parse_phenotypic_series(lines(omim / 'phenotypicSeries.txt'))),
+        series=tuple(parse_phenotypic_series(lines(inputs.phenotypic_series))),
         morbidmap=tuple(morbidmap),
         associations=tuple(associations),
-        references=tuple(parse_pubmed_refs(lines(data / 'pubmed-refs.tsv'))),
-        entry_mappings=tuple(parse_entry_mappings(lines(data / 'mappings.tsv'))),
+        references=tuple(parse_pubmed_refs(lines(inputs.pubmed_refs))),
+        entry_mappings=tuple(parse_entry_mappings(lines(inputs.entry_mappings))),
         mondo_mappings=tuple(mondo),
     )
-    return release

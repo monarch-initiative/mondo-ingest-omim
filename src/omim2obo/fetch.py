@@ -25,11 +25,10 @@ from omim2obo.parse.omim import parse_mim_titles, parse_morbidmap
 MIM_FILES = ('mimTitles', 'genemap2', 'mim2gene', 'phenotypicSeries', 'morbidmap')
 
 
-def fetch():
-    """Bring data/ up to date with OMIM. Needs the keys in .env."""
+def download_mim_files():
+    """OMIM's five downloadable files, into data/. Needs the download key in .env."""
     for file_name in MIM_FILES:
         download_mim_file(file_name)
-    update_cache__pubmed_refs_and_mappings()
 
 
 def download_mim_file(file_name: str):

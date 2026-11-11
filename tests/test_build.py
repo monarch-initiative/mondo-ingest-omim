@@ -1,6 +1,6 @@
 """The whole build, on the smallest inputs that exercise every file it reads."""
 
-import sys
+from click.testing import CliRunner
 
 from omim2obo.__main__ import main
 
@@ -40,20 +40,35 @@ MONDO = (
 )
 
 
-def test_build(tmp_path, monkeypatch):
+def test_build(tmp_path):
     for directory, files in (('omim', OMIM), ('data', DATA), ('.', {'mondo.sssom.tsv': MONDO})):
         for name, text in files.items():
             path = tmp_path / directory / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text)
-    arguments = '--omim omim --data data --mondo-mappings mondo.sssom.tsv --out out'
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(
-        sys, 'argv', ['omim2obo', 'build', *arguments.split(), '--version', '2026-01-01']
-    )
+    options = {
+        '--mim-titles': 'omim/mimTitles.txt',
+        '--morbidmap': 'omim/morbidmap.txt',
+        '--mim2gene': 'omim/mim2gene.txt',
+        '--genemap2': 'omim/genemap2.txt',
+        '--phenotypic-series': 'omim/phenotypicSeries.txt',
+        '--protected': 'data/protected-disease-gene.tsv',
+        '--exclusions': 'data/exclusions-disease-gene.tsv',
+        '--known-capitalizations': 'data/known_capitalizations.tsv',
+        '--hgnc': 'data/hgnc/hgnc_complete_set.txt',
+        '--pubmed-refs': 'data/pubmed-refs.tsv',
+        '--entry-mappings': 'data/mappings.tsv',
+        '--mondo-mappings': 'mondo.sssom.tsv',
+        '--out': 'out',
+        '--version': '2026-01-01',
+    }
+    arguments = []
+    for flag, value in options.items():
+        arguments += [flag, value if flag == '--version' else str(tmp_path / value)]
 
-    main()
+    result = CliRunner().invoke(main, ['build', *arguments], catch_exceptions=False)
 
+    assert result.exit_code == 0, result.output
     assert (tmp_path / 'out/mondo-omim-genes.robot.tsv').read_text().splitlines()[2:] == [
         'http://purl.obolibrary.org/obo/MONDO_9900001\thttp://identifiers.org/hgnc/99901'
         '\tOMIM:900001\thttps://omim.org/entry/900100'
