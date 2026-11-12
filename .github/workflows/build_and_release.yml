@@ -14,9 +14,6 @@ jobs:
     container: obolibrary/odkfull:v1.5.3
     steps:
     - uses: actions/checkout@v4
-    - name: Install
-      run: |
-        make install
     - name: Create .env file
       run: |
         echo "API_KEY=${{ secrets.MONARCH_OMIM_API_KEY }}" > .env

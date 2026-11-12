@@ -1,0 +1,13 @@
+# Commits that only reformat. `git blame` skips them with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# GitHub's blame view reads this file without being told.
+
+# Apply ruff's formatting and automatic fixes
+eea9a7abf9abc4c999e8879994c54f7483d299ea
+
+# Rewrap long comments and docstrings in the carried-over files
+2eb630ccd87a277f50d47f781757eff4c7dfb37f
+
+# ruff format and autofixes, then rewrapped comments, in the carried-over fetching code
+e7d3508300b9c809f16ef909f9c7a738b7114b42
+3a7e229f9447a7fb762ad05a575eb6ee3286c769

@@ -18,44 +18,58 @@ one at https://omim.org/downloads. This will probably be sufficient for the purp
 of downloading the necessary text files, but if not, you can also require access to
 the REST API as well: https://omim.org/api.
    
-### 2. Python dependencies
-#### 2.1 Python installation
-- [RealPython blog install guide](https://realpython.com/installing-python/): My preferred guide for installing on Windows or Mac
-- [Python documentation for installing on Windows](https://docs.python.org/3/using/windows.html)
-- [Python documentation for installing on Mac](https://docs.python.org/3/using/mac.html)
+### 2. Dependencies
+The release build runs in the [ODK](https://github.com/INCATools/ontology-development-kit) container
+(`sh run.sh ...`), which has `robot` and every Python package the build needs. Nothing is installed.
 
-#### 2.2 Setup virtual environment & installing packages
-1. Run: `make install`
-2. There is a known possible issue with dependency `psutil` on some systems. If 
-you get an error related to this when installing, ignore it, as it is does not 
-seem to be needed to run any of the tools. If however you do get a `psutil` error
-when running anything, please let us know by [creating an issue](https://github.com/monarch-initiative/omim/issues/new).
+To work on the code outside the container, install [uv](https://docs.astral.sh/uv/) and run
+`make install` (`uv sync`). Then `uv run pytest` runs the tests and `uv run ruff check` the linter.
 
 ## Running & creating release
 Run: `sh run.sh make all`
 
-Running this will create new release artefacts in the root directory.
+This downloads the latest files from omim.org, Mondo and HGNC, refreshes the cache of PubMed
+references and UMLS / Orphanet mappings in `data/`, and writes new release artefacts to the root
+directory.
 
-You can also run `make build` or `python -m omim2obo`. These are all the same 
-command. This will download files from omim.org and run the build.
+The two halves can be run separately:
+- `sh run.sh make omim.owl`: only the build. It is redone when an input has changed, and
+  a download that is missing is fetched first. `python -m omim2obo build --help` lists every file it
+  reads.
+- `sh run.sh make fetch`: only the downloads. Make cannot tell when a file on someone else's server
+  has changed, so each source has a target that always fetches: `fetch-omim`, `fetch-mondo`,
+  `fetch-hgnc` and `fetch-cache` (PubMed references and UMLS / Orphanet mappings from OMIM's API).
+  `fetch` runs all four. HGNC and the API cache are committed, so expect a diff afterwards.
 
-Offline/cache option: `python -m omim2obo --use-cache`
-If there's an issue downloading the files, or you are offline, or you just want 
-to use the cache anyway, you can pass the `--use-cache` flag.
+`make clean` removes what the build wrote and leaves the downloads. The Makefile needs GNU make 4.3
+or later.
+
+The code is in `src/omim2obo`.
 
 ## Curator configuration files
 **[protected-disease-gene.tsv](https://github.com/monarch-initiative/omim/blob/main/data/protected-disease-gene.tsv)**
 This file contains a list of disease-gene associations that should not be removed from the ontology, even if the 
-pipeine logic would otherwise determine that the association is not disease-defining. As of 2025/03/06, the only `type`
-of protection in the file is 'digenic'. For this protection type, there should be 2 rows for a given phenotype MIM. The 
-following fields are required for each row: `phenotype_mim`, `type`, `gene_mim`, `hgnc_id`)  should be filled out 
-in each row. `orcid` is optional but encouraged. `comment`, `mondo_id`, and `mondo_label` are all optional and not used 
-in any programmatic way.
+pipeline logic would otherwise determine that the association is not disease-defining. Each row pairs one gene
+with one Mondo class, for one OMIM phenotype.
+
+Required in every row, and checked when the build (and the tests) read the file:
+- `phenotype_mim` and `gene_mim`, as `OMIM:` followed by six digits
+- `hgnc_id`, as `HGNC:` followed by the number
+- `mondo_id`, as `MONDO:` followed by seven digits. This is the class the gene is added to in
+  `mondo-omim-genes.robot.tsv`, which need not be the class the OMIM entry itself maps to: for an entry with included
+  titles it may be the class for one of those.
+
+A row that leaves one of these blank or malformed stops the build, with a message naming the line.
+
+`orcid` is optional but encouraged. `type` records why the association is protected (`manually reviewed`, `digenic`,
+`included entry`, `provisional`, ...); it is free text and nothing in the pipeline reads it yet. `mondo_label` and
+`comment` are for readers only.
 
 **[exclusions-disease-gene.tsv](https://github.com/monarch-initiative/omim/blob/main/data/exclusions-disease-gene.tsv)**
 This file contains a list of disease-gene associations that should be removed from the ontology, even if the 
-pipeine logic would otherwise determine that the association is disease-defining. There is more information about this 
-in the section describing `review.tsv`. 
+pipeline logic would otherwise determine that the association is disease-defining. There is more information about this 
+in the section describing `review.tsv`. `omim_id` and `mondo_id` are required, in the same form as above; the exclusion
+applies to the whole OMIM entry, whichever Mondo class is named.
 
 **[known_capitalizations.tsv](https://github.com/monarch-initiative/omim/blob/main/data/known_capitalizations.tsv).**
 These are known replacements where we want to take matching text (lowercase or otherwise), and replace it with what is 
@@ -65,62 +79,8 @@ string. However, it is a bit superfluous, as it will ensure that any capitalizat
 belly syndrome", or "Prune belly syndrome" would both be replaced with "Prune Belly Syndrome". This logic operates only 
 on OMIM titles (standard title, as well as alt, formerly, and included titles).
 
-## Additional tools
-<details><summary>Details</summary>
-<p>
-
-### Get PMIDs used for OMIM codes from `omim.ttl`
-Command: `sh run.sh make get-pmids`
-
-### OMIM Code Web Scraper
-Currently, the only feature is `get_codes_by_yyyy_mm`, which returns a list of OMIM codes and their prefixes from 
-https://omim.org/statistics/update.
-
-Note that this utility no longer has an identified use case. This used to be our way of determining which MIMs might 
-have out of date PMID references or Orphanet/UMLS mappings, but we've since implemented a way to get these updates 
-through the OMIM entry API. 
-
-#### Usage: Command Line Interface
-##### Syntax
-1. `make scrape y=<YEAR> m=<MONTH>`
-2. `make scrape y=<YEAR> m=<MONTH> > <path/to/outputFile>`
-
-##### Usage
-1. Get codes for May 2021, printed to terminal: `make scrape y=2021 m=5`
-2. Get codes for May 2021 and output to a file "myfile.txt": `make scrape y=2021 m=5 > myfile.txt`
-
-##### Examples
-Command:  
-`make scrape y=2021 m=5`
-
-Response:
-```py
-[('#', '619340'),
- ('#', '619355'),
- ('*', '619357'),
- ('*', '619358'),
- ('*', '619359'),
- ('#', '619325'),
- ('#', '619328'),
- ('*', '100850'),
- ...
- ('#', '613102')]
- ```
-
-### Usage: Python API
-Using `get_codes_by_yyyy_mm()` will return a list of tuples.
-
-```py
-from omim2obo.omim_code_scraper import get_codes_by_yyyy_mm
-
-code_tuples = get_codes_by_yyyy_mm('2021/05')
-```
-
-</p>
-</details> 
-
 ## Release files
-- `omim.ttl`: OMIM ontologized
+- `omim.owl`: OMIM ontologized
 - `omim.sssom.tsv`: SSSOM mapping file
 - `mondo-omim-genes.robot.tsv`: ROBOT template for adding OMIM genes to Mondo
 - `review.tsv`: Special cases to consider for manual review
