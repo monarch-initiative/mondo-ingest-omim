@@ -22,7 +22,6 @@ uses uv.
 - `make clean` - Remove what the build wrote
 - `uv run pytest` (or `make test` in the container) - Tests, all on synthetic fixtures
 - `uv run ruff format` and `uv run ruff check` - Formatter and linter; both are checked in CI
-- `make golden` - Rebuild the pre-rewrite pipeline's outputs into `golden/out/` for comparison
 
 ## Architecture
 

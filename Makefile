@@ -140,14 +140,6 @@ lint:
 	ruff format --check
 	ruff check
 
-# Capture golden outputs from the legacy pipeline as it was before the rewrite. Needs Docker and OMIM's downloads
-# GOLDEN_OMIM_DATA: the frozen copy of OMIM's downloads to build it from
-GOLDEN_OMIM_DATA ?= omim-data
-
-.PHONY: golden
-golden:
-	OMIM_DATA=$(GOLDEN_OMIM_DATA) golden/capture.sh
-
 # HELP -----------------------------------------------------------------------------------------------------------------
 .PHONY: help
 help:
